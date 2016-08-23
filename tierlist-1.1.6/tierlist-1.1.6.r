@@ -190,18 +190,18 @@ ggsave(file='4br-1.1.6-withdeltas.png', width=12, height=4.5, dpi=200, plot=plot
 ####
 
 delta_order<-order(true_delta)
-sort_df<-cbind(as.character(df2$Character), Baseline=0, df2$true_delta)
+sort_df<-cbind(Baseline=0, df2$true_delta)
 sort_df<-sort_df[delta_order, ]
 sort_df<-as.data.frame(cbind(xplot, sort_df))
-colnames(sort_df)[c(2,4)]<-c('Character', 'true_delta')
+colnames(sort_df)[3]<-'true_delta'
 
 plot3<-ggplot(data=sort_df, aes(x=xplot, y=true_delta)) +
     geom_segment(aes(x=xplot, xend=xplot, y=Baseline, yend=true_delta, colour=true_delta), arrow=arrow(length=unit(0.3, 'cm'))) +
-    mapply(make_annotation, rasters[delta_order], sort_df[,1], sort_df[,4]) + 
     mapply(make_annotation, rasters[delta_order], sort_df[,1], sort_df[,3]) + 
+    mapply(make_annotation, ghosts[delta_order], sort_df[,1], sort_df[,2]) + 
     scale_colour_gradient2(low="blue", high="red") +
     theme(axis.title.x=element_blank(), axis.text.x=element_blank(), legend.position='none') +
     labs(title='4BR tier list - patch 1.1.6') +
     scale_x_continuous(expand=c(0.015, 0))
 
-ggsave(file='4br-1.1.6-sorted-deltas.png', width=12, height=4.5, dpi=200, plot=plot2)
+ggsave(file='4br-1.1.6-sorted-deltas.png', width=12, height=4.5, dpi=200, plot=plot3)
