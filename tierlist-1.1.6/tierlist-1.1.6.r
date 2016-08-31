@@ -205,3 +205,22 @@ plot3<-ggplot(data=sort_df, aes(x=xplot, y=true_delta)) +
     scale_x_continuous(expand=c(0.015, 0))
 
 ggsave(file='4br-1.1.6-sorted-deltas.png', width=12, height=4.5, dpi=200, plot=plot3)
+
+#####
+# sort rank scores by stddev
+#####
+
+sd_order<-order(df[,4])
+sd_df<-cbind(Baseline=0, df[,4])
+sd_df<-sd_df[sd_order, ]
+sd_df<-as.data.frame(cbind(xplot, sd_df))
+colnames(sd_df)[3]<-'StdDev'
+
+plot4<-ggplot(data=sd_df, aes(x=xplot, y=StdDev)) +
+    geom_segment(aes(x=xplot, xend=xplot, y=Baseline, yend=StdDev)) +
+    mapply(make_annotation, rasters[sd_order], sd_df[,1], sd_df[,3]) + 
+    theme(axis.title.x=element_blank(), axis.text.x=element_blank(), legend.position='none') +
+    labs(title='4BR tier list - StdDevs - patch 1.1.6') +
+    scale_x_continuous(expand=c(0.015, 0))
+
+ggsave(file='4br-1.1.6-sorted-stddev.png', width=12, height=4.5, dpi=200, plot=plot4)
