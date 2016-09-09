@@ -15,8 +15,6 @@ imgpre<-'../StockIcons/stock_90_'
 imgpost<-'_01.png'
 img_offset<-0.15
 
-# make_rasters.r
-
 make_rasters<-function(D, alpha=1) {
     raster_list<-list()
     for (i in 1:nrow(D)) {
