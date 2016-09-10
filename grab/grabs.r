@@ -146,6 +146,138 @@ ggsave(file='GrabRange_v_FAF_zoom.png', width=12, height=8, dpi=100, plot=p2)
 # Max grab range vs active frames
 ##################
 
+# assumptions/notes: 
+# regular grab reaches max range on hitboxstart
+# tether grabs reach max range on hitboxend
+# assume tether grab first active frame max range is average of max ranges of regular grabs
+# assume linear growth for tether range over course of active frames
+# tether grabs defined as grabs with more than one active frame
+# when removing 3rd element, this is because that is pacman, who requires special treatment
+
+dat3 <-  dat %>% mutate(Tether = (HitboxEnd - HitboxStart != 1))
+tethers <- select(dat3, Tether)
+tether_inds<-which(tethers[,])
+avg_tether_start<- dat3 %>% filter(Tether==FALSE) %>% summarize(mean(GrabPixels)) %>% .[1,1]
+
+p3_offset<-5
+
+# set up plotting frame and some layers
+p3_base <- ggplot(data=dat3, aes(x=HitboxEnd, y=GrabPixels))
+p3_reg_icons <- mapply(make_annotation, rasters[-tether_inds], dat3[-tether_inds, 3], dat3[-tether_inds, 2], p3_offset)
+# p3_tether_solid <- mapply(make_annotation, rasters[tether_inds[-3]], dat3[tether_inds[-3],4], dat3[tether_inds[-3],2], p3_offset)
+p3_tether_solid <- mapply(make_annotation, rasters[tether_inds], dat3[tether_inds,4], dat3[tether_inds,2], p3_offset)
+p3_ax <- labs(x='Hitbox Active (Frame)', y='Max Grab Range (in pixels)')
+p3_nozoom_coords<-coord_cartesian(xlim=c(6, 39))
+
+
+# add transparent best guess icons for beginning of tethers
+ghosts<-make_rasters(dat3, 0.5)
+p3_tether_ghost <- mapply(make_annotation, ghosts[tether_inds[-3]], dat3[tether_inds[-3],3], avg_tether_start, p3_offset)
+
+# add segments for tether linear fits
+tether_cols<-rep(NA, length.out=nrow(dat))
+tether_cols[tether_inds[-3]]<-c('green4', 'magenta', 'khaki4', 'orangered', 'dodgerblue', 'chartreuse2', 'green')
+make_segment<-function(tether_ind) {
+    annotate('segment', x=dat3[tether_ind, 3], xend=dat3[tether_ind, 4], y=avg_tether_start, yend=dat3[tether_ind, 2], colour=tether_cols[tether_ind], size=2, alpha=0.5)
+}
+p3_segments <- mapply(make_segment, tether_inds[-3])
+
+# pacman has a discontinuous, three phase grab. handle manually
+# add transparent icons for pac. grob bug makes it such that I need a separate rasterGrob for each annotation
+pac_img<-readPNG(paste(imgpre, tolower(dat3[tether_inds[3], 1]), imgpost, sep=''))
+pac_trans<-matrix(rgb(pac_img[,,1], pac_img[,,2], pac_img[,,3], pac_img[,,4]*0.5), nrow=dim(pac_img)[1])
+pg1<-rasterGrob(pac_trans, interpolate=TRUE)
+pg2<-rasterGrob(pac_trans, interpolate=TRUE)
+pg3<-rasterGrob(pac_trans, interpolate=TRUE)
+pg4<-rasterGrob(pac_trans, interpolate=TRUE)
+pac_ghost1<-make_annotation(pg1, 12, avg_tether_start, p3_offset)
+pac_ghost2<-make_annotation(pg2, 14, avg_tether_start, p3_offset)
+pac_ghost3<-make_annotation(pg3, 22, mean(c(avg_tether_start, dat3[32,2])), p3_offset)
+pac_ghost4<-make_annotation(pg4, 24, mean(c(avg_tether_start, dat3[32,2])), p3_offset)
+pac_ghost5<-make_annotation(ghosts[[32]], 32, dat3[32,2], p3_offset)
+
+# add segments for pac
+pac_line1<-annotate('segment', x=12, xend=14, y=avg_tether_start, yend=avg_tether_start, colour='gold', size=2, alpha=0.5)
+pac_line2<-annotate('segment', x=22, xend=24, y=mean(c(avg_tether_start, dat3[32,2])), yend=mean(c(avg_tether_start, dat3[32,2])), colour='gold', size=2, alpha=0.5)
+pac_line3<-annotate('segment', x=32, xend=39, y=dat3[32,2], yend=dat3[32,2], colour='gold', size=2, alpha=0.5)
+
+p3_nozoom <- p3_base + pac_line1 + pac_line2 + pac_line3 +
+    pac_ghost1 + pac_ghost2 + pac_ghost3 + pac_ghost4 + pac_ghost5 +
+    p3_segments + p3_tether_ghost + p3_tether_solid + 
+    p3_reg_icons + p3_ax + p3_nozoom_coords
+
+ggsave(file='GrabRange_v_Frames_nozoom.png', width=10, height=6, dpi=100, plot=p3_nozoom)
+
+## zoomed version with legend in right panel
+p4_offset<-1.5
+p4_zoom_coords<-coord_cartesian(xlim=c(5, 13), ylim=c(60, 105))
+p4_reg_icons<-mapply(make_annotation, rasters[-tether_inds], dat3[-tether_inds, 3], dat3[-tether_inds, 2], p4_offset)
+p4_tether_ghosts<-mapply(make_annotation, ghosts[tether_inds], dat3[tether_inds, 3], avg_tether_start, p4_offset)
+p4_rect1<-make_legend_rect(6.6, 7.4, 72.5, 82.5, 0, alpha=0.3, fill='lightskyblue')
+p4_rect2<-make_legend_rect(5.6, 6.4, 69.5, 80.5, 0, alpha=0.3, fill='lightcoral')
+
+p4_L<-p3_base + p4_reg_icons + p4_tether_ghosts + p4_zoom_coords + p4_rect1 + p4_rect2
+
+legend_4U<-array(NA, dim=c(9,3))
+legend_4U[1,]<-c('Shulk', 1, 81)
+legend_4U[2,]<-c('Bayonetta', 2, 81)
+legend_4U[3,]<-c('Kamui', 0.5, 78)
+legend_4U[4,]<-c('Lucina', 1.5, 78)
+legend_4U[5,]<-c('Marth', 2.5, 78)
+legend_4U[6,]<-c('Captain', 1, 76)
+legend_4U[7,]<-c('Mewtwo', 2, 76)
+legend_4U[8,]<-c('Reflet', 1, 74)
+legend_4U[9,]<-c('Roy', 2, 74)
+legend_4U<-as.data.frame(legend_4U)
+legend_4U[,2]<-as.numeric(as.character(legend_4U[,2]))
+legend_4U[,3]<-as.numeric(as.character(legend_4U[,3]))
+colnames(legend_4U)<-c('characer','x','y')
+l4U_vec<-c(48, 1, 15, 24, 27, 2, 29, 40, 44)
+l4U_offset<-0.75
+
+l4U<-ggplot(data=legend_4U, aes(x=x, y=y)) +
+    mapply(make_annotation, rasters[l4U_vec], legend_4U[,2], legend_4U[,3], l4U_offset) +
+    coord_cartesian(xlim=c(-0.5, 3.5), ylim=c(73, 82), expand=F) +
+    theme(axis.text.x = element_blank(), axis.ticks=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank()) +
+    make_legend_rect(-0.5, 3.5, 73, 82, 0, 'lightskyblue', 0.3)
+
+legend_4D<-array(NA, dim=c(19, 3))
+legend_4D[1,]<-c('Luigi', 1, 79)
+legend_4D[2,]<-c('Mario', 2, 79)
+legend_4D[3,]<-c('Gunner', 3, 79)
+legend_4D[4,]<-c('Sword', 4, 79)
+legend_4D[5,]<-c('Pit', 2, 78)
+legend_4D[6,]<-c('DPit', 3, 78)
+legend_4D[7,]<-c('Diddy', 2, 77)
+legend_4D[8,]<-c('Ness', 3, 77)
+legend_4D[9,]<-c('GnW', 1, 74)
+legend_4D[10,]<-c('Peach', 2, 74)
+legend_4D[11,]<-c('WFT', 3, 74)
+legend_4D[12,]<-c('Brawler', 4, 74)
+legend_4D[13,]<-c('Fox', 2, 73)
+legend_4D[14,]<-c('Pikachu', 3, 73)
+legend_4D[15,]<-c('Kirby', 2, 71)
+legend_4D[16,]<-c('Sheik', 3, 71)
+legend_4D[17,]<-c('Rockman', 2.5, 76)
+legend_4D[18,]<-c('Sonic', 2.5, 75)
+legend_4D[19,]<-c('Ryu', 2.5, 72)
+legend_4D<-as.data.frame(legend_4D)
+legend_4D[,2]<-as.numeric(as.character(legend_4D[,2]))
+legend_4D[,3]<-as.numeric(as.character(legend_4D[,3]))
+colnames(legend_4D)<-c('characer','x','y')
+l4D_vec<-c(25, 26, 57, 58, 37, 38, 5, 31, 11, 34, 53, 56, 10, 35, 16, 47, 42, 49, 45)
+
+l4D<-ggplot(data=legend_4D, aes(x=x, y=y)) +
+    mapply(make_annotation, rasters[l4D_vec], legend_4D[,2], legend_4D[,3], legend_offset) +
+    coord_cartesian(xlim=c(0,5), ylim=c(70.5, 79.5), expand=F) + 
+    theme(axis.text.x = element_blank(), axis.ticks=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank()) +
+    make_legend_rect(0, 5, 70.5, 79.5, 0, 'lightcoral', 0.3)
+
+p4_legends<-arrangeGrob(l4U, l4D, nrow=2, heights=c(8,9))
+p4<-arrangeGrob(p4_L, p4_legends, nrow=1, widths=c(3,1))
+
+ggsave(file='GrabRange_v_Frames_zoom.png', width=10, height=6, dpi=100, plot=p4)
+
 
 ##################
 # Endlag vs startup
