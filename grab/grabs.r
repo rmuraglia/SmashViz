@@ -216,7 +216,9 @@ p4_tether_ghosts<-mapply(make_annotation, ghosts[tether_inds], dat3[tether_inds,
 p4_rect1<-make_legend_rect(6.6, 7.4, 72.5, 82.5, 0, alpha=0.3, fill='lightskyblue')
 p4_rect2<-make_legend_rect(5.6, 6.4, 69.5, 80.5, 0, alpha=0.3, fill='lightcoral')
 
-p4_L<-p3_base + p4_reg_icons + p4_tether_ghosts + p4_zoom_coords + p4_rect1 + p4_rect2
+p4_L<-p3_base + pac_line1 + p3_segments +
+    p4_reg_icons + p4_tether_ghosts + p4_zoom_coords +
+    p4_rect1 + p4_rect2 
 
 legend_4U<-array(NA, dim=c(9,3))
 legend_4U[1,]<-c('Shulk', 1, 81)
@@ -283,6 +285,89 @@ ggsave(file='GrabRange_v_Frames_zoom.png', width=10, height=6, dpi=100, plot=p4)
 # Endlag vs startup
 ##################
 
+p5_offset<-0.75
 
+p5<-ggplot(data=dat, aes(x=HitboxStart, y=EndLag)) +
+    mapply(make_annotation, rasters, dat[,3], dat[,6], p5_offset) +
+    labs(x='Start Up Frames', y='Recovery Frames')
 
+ggsave(file='GrabStart_v_Recovery_nozoom.png', width=8, height=8, dpi=100, plot=p5)
 
+# zoom view with colorbox legends
+p6_offset<-0.6
+
+p6_L<-ggplot(data=dat, aes(x=HitboxStart, y=EndLag)) +
+    mapply(make_annotation, rasters, dat[,3], dat[,6], p6_offset) +
+    coord_cartesian(xlim=c(5,13), ylim=c(16, 33), expand=F) +
+    make_legend_rect(6.6, 7.4, 27.25, 28.75, 0, 'palegreen', 0.3) +
+    make_legend_rect(6.6, 7.4, 21.25, 24.75, 0, 'lightskyblue', 0.3) +
+    make_legend_rect(5.6, 6.4, 20.25, 25.75, 0, 'lightcoral', 0.3) +
+    labs(x='Start Up Frames', y='Recovery Frames')
+
+# green legend
+legend_1<-array(NA, dim=c(3,3))
+legend_1[1,]<-c('Dedede', 1, 28)
+legend_1[2,]<-c('Ganon', 2, 28)
+legend_1[3,]<-c('Mewtwo', 3, 28)
+legend_1<-as.data.frame(legend_1)
+legend_1[,2]<-as.numeric(as.character(legend_1[,2]))
+legend_1[,3]<-as.numeric(as.character(legend_1[,3]))
+colnames(legend_1)<-c('characer','x','y')
+l1_vec<-c(4, 12, 29)
+l1<-ggplot(data=legend_1, aes(x=x, y=y)) + mapply(make_annotation, rasters[l1_vec], legend_1[,2], legend_1[,3], 0.75) + theme(axis.text.x=element_blank(), axis.ticks=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank()) + coord_cartesian(xlim=c(0, 4), ylim=c(27, 29), expand=F) + annotate('rect', xmin=0, xmax=4, ymin=27, ymax=29, alpha=0.3, fill='palegreen') + scale_y_continuous(breaks=c(28))
+
+# blue legend
+legend_2<-array(NA, dim=c(11, 3))
+legend_2[1,]<-c('Cloud', 1.5, 24)
+legend_2[2,]<-c('Metaknight', 2.5, 24)
+legend_2[3,]<-c('Palutena', 3.5, 24)
+legend_2[4,]<-c('Bayonetta', 1, 23)
+legend_2[5,]<-c('Falcon', 2, 23)
+legend_2[6,]<-c('Corrin', 3, 23)
+legend_2[7,]<-c('ROBOT', 4, 23)
+legend_2[8,]<-c('Lucina', 1, 22)
+legend_2[9,]<-c('Marth', 2, 22)
+legend_2[10,]<-c('Roy', 3, 22)
+legend_2[11,]<-c('Shulk', 4, 22)
+legend_2<-as.data.frame(legend_2)
+legend_2[,2]<-as.numeric(as.character(legend_2[,2]))
+legend_2[,3]<-as.numeric(as.character(legend_2[,3]))
+colnames(legend_2)<-c('character', 'x', 'y')
+l2_vec<-c(3, 28, 33, 1, 2, 15, 41, 24, 27, 44, 48)
+l2<-ggplot(data=legend_2, aes(x=x, y=y)) + mapply(make_annotation, rasters[l2_vec], legend_2[,2], legend_2[,3], 0.45) + theme(axis.text.x=element_blank(), axis.ticks=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank()) + coord_cartesian(xlim=c(0, 5), ylim=c(21, 25), expand=F) + annotate('rect', xmin=0, xmax=5, ymin=21, ymax=25, alpha=0.3, fill='lightskyblue')
+
+# red legend
+legend_3<-array(NA, dim=c(20, 3))
+legend_3[1,]<-c('Diddy', 3.5, 25)
+legend_3[2,]<-c('Peach', 5.5, 25)
+legend_3[3,]<-c('Megaman', 3.5, 24)
+legend_3[4,]<-c('Sonic', 5.5, 24)
+legend_3[5,]<-c('GnW', 1.5, 23)
+legend_3[6,]<-c('Pit', 3, 23)
+legend_3[7,]<-c('DPit', 4.5, 23)
+legend_3[8,]<-c('Ryu', 6, 23)
+legend_3[9,]<-c('Brawler', 7.5, 23)
+legend_3[10,]<-c('Doc', 1, 22)
+legend_3[11,]<-c('Fox', 2, 22)
+legend_3[12,]<-c('Lucario', 3, 22)
+legend_3[13,]<-c('Luigi', 4, 22)
+legend_3[14,]<-c('Mario', 5, 22)
+legend_3[15,]<-c('WFT', 6, 22)
+legend_3[16,]<-c('Gunner', 7, 22)
+legend_3[17,]<-c('Sword', 8, 22)
+legend_3[18,]<-c('Kirby', 3, 21)
+legend_3[19,]<-c('Pikachu', 4.5, 21)
+legend_3[20,]<-c('Sheik', 6, 21)
+legend_3<-as.data.frame(legend_3)
+legend_3[,2]<-as.numeric(as.character(legend_3[,2]))
+legend_3[,3]<-as.numeric(as.character(legend_3[,3]))
+colnames(legend_3)<-c('character', 'x', 'y')
+l3_vec<-c(5, 34, 42, 49, 11, 37, 38, 45, 56, 7, 10, 22, 25, 26, 53, 57, 58, 16, 35, 47)
+l3<-ggplot(data=legend_3, aes(x=x, y=y)) + mapply(make_annotation, rasters[l3_vec], legend_3[,2], legend_3[,3], 0.7) + theme(axis.text.x=element_blank(), axis.ticks=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank()) + coord_cartesian(xlim=c(0, 9), ylim=c(20.5, 25.5), expand=F) + annotate('rect', xmin=0, xmax=9, ymin=20, ymax=26, alpha=0.3, fill='lightcoral') + scale_y_continuous(breaks=c(21, 22, 23, 24, 25))
+
+# combine legends
+l1l2l3<-arrangeGrob(l1, l2, l3, nrow=3, heights=c(2, 4, 5))
+
+# combine all
+p6<-arrangeGrob(p6_L, l1l2l3, nrow=1, widths=c(2.5, 1))
+ggsave(file='GrabStart_v_Recovery_zoom.png', width=12, height=8, dpi=100, plot=p6)
