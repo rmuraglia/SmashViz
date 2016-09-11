@@ -6,6 +6,7 @@ This repository represents an attempt to provide a statistical perspective to ad
 
 The directories are as follows:
 
+* _anther_season1_co-usage_: based on season 1 anther's ladder data, determine which characters are frequently used as secondaries for each main
 * _grab_: Visualization of character grab attributes
 * _StockIcons_: Character stock icons in png format suitable for embedding in plots
 * _pop_v_results_: Judgement of character under or over performance (results) based on character usage rates (popularity) from tournament data
