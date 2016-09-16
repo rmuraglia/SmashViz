@@ -201,3 +201,53 @@ ggsave(file='anther_s1_cusage_hmap03.png', width=12, height=8, dpi=100, plot=p3)
 
 
 
+
+#### testing area
+# plot showing similarity between mains
+tim<-dist(use_mat, method='manhattan')
+hc<-hclust(tim)
+plot(hc)
+
+# similarity between secondaries
+# this doesn't make a ton of sense since these don't necessarily add to a similar value - general high use can cluster with general high use even if proportions are off
+tom<-dist(t(use_mat), method='manhattan')
+h2<-hclust(tom)
+plot(h2)
+
+# factor_key preserves column order for Secondaries
+# must manually add factor levels (in order) for mains 
+test_df<-as.data.frame(use_mat[hc$order, h2$order]) %>% mutate(Mains=rownames(use_mat)[hc$order]) %>% gather(key=Secondaries, value=Usage_Rate, -Mains, factor_key=TRUE) %>% mutate(Mains=factor(Mains, levels=rownames(use_mat)[hc$order]))
+
+tplot<- ggplot(test_df, aes(x=Secondaries, y=Mains)) + 
+    geom_tile(aes(fill=Usage_Rate), colour='grey50') +
+    scale_fill_gradient2(low='white', high='black') +
+    theme(legend.position='none') + 
+    # theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5)) # perpendicular
+    theme(axis.text.x=element_text(angle=45, hjust=1, vjust=1)) # slanted
+
+# try differences based on exp pow
+pow_mat <- plot_df %>% select(-Usage_Rate) %>% spread(key=Secondaries, value=PowUsage) %>% select(-Mains)
+rownames(pow_mat)<-rownames(use_mat)
+
+pow_dist_main<-dist(pow_mat, method='manhattan')
+pow_dist_secd<-dist(t(pow_mat), method='manhattan')
+pow_ord_main<-hclust(pow_dist_main)$order
+pow_ord_secd<-hclust(pow_dist_secd)$order
+
+pow_df<-as.data.frame(pow_mat[pow_ord_main, pow_ord_secd]) %>%
+    mutate(Mains=rownames(use_mat)[pow_ord_main]) %>%
+    gather(key=Secondaries, value=PowUsage, -Mains, factor_key=TRUE) %>%
+    mutate(Mains=factor(Mains, levels=rownames(use_mat)[pow_ord_main]))
+
+pow_plot<-ggplot(pow_df, aes(x=Secondaries, y=Mains)) + 
+    geom_tile(aes(fill=PowUsage), colour='grey50') +
+    scale_fill_gradient2(low='blue', high='red') +
+    theme(legend.position='none') + 
+    # theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5)) # perpendicular
+    theme(axis.text.x=element_text(angle=45, hjust=1, vjust=1)) # slanted
+
+
+
+
+
+
