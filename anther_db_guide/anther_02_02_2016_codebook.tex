@@ -1,0 +1,309 @@
+\documentclass[12pt]{article}
+\usepackage{graphics, graphicx, tabularx, fancyhdr, amsmath, lastpage, indentfirst, lscape, algorithm, algorithmic, siunitx}
+\usepackage[margin=1in]{geometry}
+\usepackage[super, sort&compress, comma]{natbib}
+
+% define variable for OSX vs. Windows path to Dropbox folder
+% \def \dropboxpath {D:/Dropbox/} % for windows
+\def \dropboxpath {/Users/rmuraglia/Dropbox/} % for osx
+
+% define spacing for paragraph indent and space between paragraphs
+% \setlength{\parindent}{4ex}
+% \setlength{\parskip}{0ex}
+
+% set custom header and footers
+\pagestyle{fancy}
+\fancyhf{} % remove current presets
+%\renewcommand{\headrulewidth}{0pt} %uncomment to remove header line separator
+\fancyhf[EOHL]{Anther's 02/02/2016 db codebook} % evens, odds, header, left
+\fancyhf[EOHR]{Ryan Muraglia} % events, odds, header, right
+\fancyhf[EOFC]{\thepage / \pageref{LastPage}} % evens, odds, footer, center
+\setlength{\headheight}{15pt} % might throw a warning about minimum height: adjust this to fix
+
+% create custom method for delimiting days: draws a short centered line and aligns the new date to the right
+\newcommand{\newday}[1]{
+\centerline{ \rule{3in}{0.4pt}} 
+
+\hfill \emph{#1} \\
+}
+
+% redefine list structures to be more compact
+\let\oldenumerate\enumerate
+\renewcommand{\enumerate}{
+  \oldenumerate
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \setlength{\parsep}{0pt}
+  % \vspace{-2ex}
+}
+\let\olditemize\itemize
+\renewcommand{\itemize}{
+  \olditemize
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \setlength{\parsep}{0pt}
+  % \vspace{-2ex}
+}
+\let\olddescription\description
+\renewcommand{\description}{
+  \olddescription
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \setlength{\parsep}{0pt}
+  % \vspace{-2ex}
+}
+
+% macro for red text for annotating drafts
+\usepackage{color}
+\newcommand{\redtext}[1]{
+  \textcolor{red}{#1}
+}
+
+% properly display backticks in verbatim environment, from http://tex.stackexchange.com/questions/63353/how-to-properly-display-backticks-in-verbatim-environment
+\makeatletter
+\let\@sverbatim\@verbatim
+\def\@verbatim{\@sverbatim \verbatimwithtick}
+{\catcode``=13 \gdef\verbatimwithtick{\chardef`=18 }} 
+\makeatother
+
+\begin{document}
+
+To begin working with the anther's ladder database dump, first acquire the sql dump file from the \#datamine channel (here saved as dumpfile.sql), then import it to mysql.
+If the dump begins with something like:
+
+\begin{verbatim}
+CREATE DATABASE `anthers_02_02_2016`
+USE `anthers_02_02_2016`
+\end{verbatim}
+
+Then you are good to simply import it directly like 
+
+\begin{verbatim}$ mysql < dumpfile.sql \end{verbatim}
+
+If there are no CREATE or USE directives, you will need to create an empty database first, then import it to that database:
+
+\begin{verbatim}
+$ mysql
+> CREATE DATABASE anthers_02_02_2016;
+> USE anthers_02_02_2016;
+> SOURCE dumpfile.sql;
+> quit
+\end{verbatim}
+
+Alternately, after creating the database, you can import it from the command line with:
+
+\begin{verbatim}
+$ mysql anthers_02_02_2016 < dumpfile.sql
+\end{verbatim}
+
+After initially creating the database, you may note that the stages table is missing. Get an export of that table and save it as stagedb.txt. Import it to your database with:
+
+\begin{verbatim}
+$ mysql anthers_02_02_2016 < stagedb.txt
+\end{verbatim}
+
+\section{Tables Overview} % (fold)
+\label{sec:tables_overview}
+
+Note that I will describe foreign key - primary key type relations between tables, but those constraints will not have been actually programmed in to the database. Nevertheless, they can be used as such.
+
+In this section, I'll describe the contents of each table, starting from most human readable, establishing relations as we go.
+Not every field will be listed below, only those most relevant to the types of analyses we will undertake.
+
+\subsection{games} % (fold)
+\label{sub:games}
+This table's primary purpose is to map games.name as strings (melee, wii u, 3ds) to games.id as integers (2, 4, 3 respectively). 
+% subsection games (end)
+
+\subsection{game\_rooms} % (fold)
+\label{sub:game_rooms}
+This table is generally not necessary for our analyses. We can already get game to id mappings from the games table. This does have some convenience fields like active\_season, but it can generally be disregarded.
+% subsection game_rooms (end)
+
+\subsection{game\_seasons} % (fold)
+\label{sub:game_seasons}
+Provides a mapping from titles (e.g. melee or wii u) to a unique season ID number. \\
+game\_seasons.ladder\_id is a foreign key to games.id.
+% subsection game_seasons (end)
+
+\subsection{characters} % (fold)
+\label{sub:characters}
+Provides a mapping from character names as strings (characters.name) to an integer id (characters.id).
+The ID is unique to a character/game combo. \\
+characters.game\_id is a foreign key to games.id.
+% subsection characters (end)
+
+\subsection{stages} % (fold)
+\label{sub:stages}
+Provides a mapping from stage names as strings (stages.name) to an integer id (stages.id).
+The ID is unique to a stage/game combo. \\
+stages.game\_id is a foreign key to games.id.
+% subsection stages (end)
+
+\subsection{season\_characters} % (fold)
+\label{sub:season_characters}
+Provides a way to track which characters were permitted for use in which season. Useful to track things like DLC release. Can imagine using down the line to track usage shares corrected by number of available characters.\\
+season\_characters.season\_id foreign key to game\_seasons.id and season\_characters.character\_id foreign key to characters.id. \\
+season\_characters.active only takes values of 0 (not permitted) or 1 (permitted).
+% subsection season_characters (end)
+
+\subsection{season\_stages} % (fold)
+\label{sub:season_stages}
+Provides a way to track which stages were permitted and what their status was in each season. \\
+season\_stages.season\_id foreign key to game\_seasons.id and season\_stages.stage\_id foreign key to stages.id. \\
+season\_stages.stage\_type takes on values of 0 (banned), 1 (starter), 2 (counterpick), and 3 (dlc [just dreamland on wii u and 3ds - probably just to check if user has it available]).
+% subsection season_stages (end)
+
+\subsection{player\_ladder\_stats} % (fold)
+\label{sub:player_ladder_stats}
+This gives us information on the performance of each player, most notably their rating, which is the best variable to represent player skill (check in the \#datamine chat to see how the ratings translate to classes).\\
+player\_id doesn't strictly have a foreign key but it points to numerous other user identifiers in later tables in pretty intuitive ways. \\
+player\_ladder\_stats.ladder\_id is a foreign key to games.id, and player\_ladder\_stats.season\_id is a foreign key to game\_seasons.id.
+% subsection player_ladder_stats (end)
+
+\subsection{player\_ladder\_stat\_characters} % (fold)
+\label{sub:player_ladder_stat_characters}
+Gives season summary information on character usage.
+For each season, it breaks down each user's wins and losses by character. \\
+player\_ladder\_stat\_characters.player\_id maps to player\_ladder\_stats.player\_id. \\
+player\_ladder\_stat\_characters.season\_id is a foreign key to game\_seasons.id, and \\ player\_ladder\_stat\_characters.character\_id is a foreign key to characters.id.
+% subsection player_ladder_stat_characters (end)
+
+\subsection{ladder\_matches} % (fold)
+\label{sub:ladder_matches}
+Now we're getting into the real meat of the database. 
+On the most basic level, it assigns a unique id to each set which you can assign games to. It stores information about the participants, the game type, season, and status on the outcome of the game itself.
+The information is summarized in table \ref{tab:ladder matches}.
+
+\begin{table}[]
+  \caption{Summary of fields in ladder\_matches table}
+  \label{tab:ladder matches}
+  \centering
+
+  \begin{tabular}{l|cc}
+  \hline
+
+  \hline
+  \textbf{Field} & \textbf{Foreign Key?} & \textbf{Description} \\
+  \hline
+    id & pointed to by others & new unique ID for each set \\
+    search\_user\_id & same player\_id as elsewhere & unique ID for player \\
+    reply\_user\_id & same player\_id as elsewhere & unique ID for player \\
+    accepted & no & 0/1 \\
+    rejected & no & 0/1 \\
+    match\_count & no & NULL/0/1/3/5\\
+    results\_finalized & no & 0/1/2/3/4 \\
+    type & no & 1/2 \\
+    ladder\_id & games.id & which smash title? \\
+    season\_id & game\_seasons.id & game/time combo \\
+  \hline
+
+  \hline
+  \end{tabular}
+\end{table}
+
+My best guesses for the cryptically coded fields are: 
+\begin{itemize}
+  \item match\_count: 3 and 5 are best of 3 and 5 respectively (regular ladder matches), 1 is a rarely used option only used for one day on PM and Brawl ladders, so it doesn't concern me. When it was null, all results\_finalized = 4 and all type = 1, and no game records exist. It seems like 0 means friendlies (unlimited match count) also don't have game records (characters used/stages), these have mixed results\_finalized with all type = 1.
+  \item results\_finalized: 1 = p1 win, 2 = p2 win, 3 = set cancelled, 4 = endless friendlies ended
+  \item type: 1 = unranked, 2 = ranked
+\end{itemize}
+
+In this dump, player/team 1 is always the search user, and player/team 2 is always the reply user. This way change in the future.
+
+% if is cancelled, results finalized = usually 3 but also sometimes 1 2 or 4
+
+% subsection ladder_matches (end)
+
+\subsection{match\_games} % (fold)
+\label{sub:match_games}
+Similar to the previous table, this table's basic function is to assign a unique ID to each game played (game here, meaning game-set terminology) and to track information about each game (characters used, stage selected etc). 
+We summarize the information in table \ref{tab:match games}.
+
+\begin{table}[]
+  \caption{Summary of fields in match\_games table}
+  \label{tab:match games}
+  \centering
+
+  \begin{tabular}{l|cc}
+  \hline
+
+  \hline
+  \textbf{Field} & \textbf{Foreign Key?} & \textbf{Description} \\
+  \hline
+    id & no & new unique ID for each game \\
+    match\_id & ladder\_matches.id & unique ID for set\\
+    game\_number & no & 1/2/3/4/5 \\
+    stage\_pick & stages.id & ID for stage\\
+    search\_user\_character & characters.id & ID for P1 char \\
+    reply\_user\_character & characters.id & ID for P2 char \\
+    search\_user\_result & no & NULL/1/2/3/5 \\
+    reply\_user\_result & no & NULL/1/2/3/5 \\
+    final\_result & no & NULL/1/2/3 \\
+  \hline
+
+  \hline
+  \end{tabular}
+\end{table}
+
+Some more detail on the fields:
+\begin{itemize}
+  \item game\_number: just tracks place in BO3 of BO5. intuitive.
+  \item search\_user\_result: from this user's perspective did they win (2) or lose (1). others tend to lack a final result, indicating that the set wasn't played to completion.
+  \item reply\_user\_result: same as search user, but from reply user's perspective
+  \item final\_result: 1 = team 1 (search user) won, 2 = team 2 (reply user) won, 3 is disputed
+\end{itemize}
+
+In general, for the previous two tables, we'll probably want to filter on ``well-behaved'' sets, so where ladder\_matches = 1 or 2, and match\_games.final\_result = 1 or 2.
+% subsection match_games (end)
+
+\subsection{match\_players} % (fold)
+\label{sub:match_players}
+
+This table will become more important in future dumps as the search user and reply user will not always be assigned as 1 and 2, and you will need to check this table to find their team assignments.
+The change field also serves as a convenient check to verify who the winner or loser of a set was, based on their rating change.
+A result of 1 indicates a loss (negative rating change) and a result of 2 indicates a win (positive rating change). \\
+match\_players.match\_id is a foreign key to ladder\_matches.id
+
+% subsection match_players (end)
+
+\subsection{match\_point\_change\_log} % (fold)
+\label{sub:match_point_change_log}
+Still a bit unclear on what this is. In many cases, there is only one entry for a match\_id, so it feels like it cannot be tracking ratings for each participant, and player\_ladder\_stat\_id doesn't seem to map to any other player IDs directly.
+% subsection match_point_change_log (end)
+
+\subsection{game\_stage\_strikes} % (fold)
+\label{sub:game_stage_strikes}
+This is exactly what you think it is. game\_id is a foreign key to match\_games.id, user\_id is the player\_id from elsewhere, and stage\_id is a foreign key to stages.id.
+% subsection game_stage_strikes (end)
+
+% section tables_overview (end)
+
+\section{Graphical representation} % (fold)
+\label{sec:graphical_representation}
+In figure \ref{fig:anther_db_struct} I attempt to map out some of the more important relations.
+\begin{figure}[]
+  \centering
+  \includegraphics[scale=0.16]{\dropboxpath Public/anther_db_struct.png}
+  \caption{Some of the important relations to query game info from the anther's ladder db}
+  \label{fig:anther_db_struct}
+\end{figure}
+% section graphical_representation (end)
+% \section{Set inspection} % (fold)
+% \label{sec:set_inspection}
+
+% \subsection{ladder\_matches accepted and rejected both 0} % (fold)
+% \label{sub:ladder_matches_accepted_and_rejected_both_0}
+% Set 6203299 has both accepted and rejected, but appears to have been played. results finalized = 0 and type = 2. Reply user both won games with no dispute. \\
+% Total of 197 set its with both accept and reject = 0, but only the previous one was actually played. All results finalized = 0  and type are mixed 1 and 2.
+% % subsection ladder_matches_accepted_and_rejected_both_0 (end)
+
+% \subsection{ladder\_matches accepted and rejected both 1} % (fold)
+% \label{sub:ladder_matches_accepted_and_rejected_both_1}
+% 457 sets meet this condition with actual matches logged. Their results are more mixed. Hard to immediately determine what is going on here 
+% % subsection ladder_matches_accepted_and_rejected_both_1 (end)
+
+% % section set_inspection (end)
+
+\end{document}
+
