@@ -35,7 +35,6 @@ num_day_skip = 7
 
 # loop through each match record to count character participation
 with open('anthers_12_17_2016_wiiu3ds_game_records_pulled_12-20-16_3-50 PM.csv') as f :
-# with open('testmini.txt') as f :
     header = f.readline() # skip first line
     for line in f :
         game_info = line.split(',')
