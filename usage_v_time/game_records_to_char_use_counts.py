@@ -57,3 +57,10 @@ all_counts = pd.concat([all_counts, week_counts], axis=1)
 all_counts = all_counts.transpose()
 all_counts.to_csv('char_use_counts.csv', index_label='Dates')
 
+
+"""
+possible new query for new DB struct - still have to refine but this type of group by and group_concat is what I want
+
+select match_id as set_id, match_games.id as game_id, created_at, game_number, stage_pick, final_result, group_concat(match_game_character_selections.character_id separator '-') as char_ids from match_games join match_game_character_selections on match_games.id = match_game_character_selections.match_game_id where match_games.id in (1, 2, 3, 4, 5, 6) group by game_id;
+"""
+
