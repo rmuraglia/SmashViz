@@ -27,6 +27,7 @@ cnx.close()
 week_start = dt.date(2014, 10, 15)
 all_counts = pd.DataFrame(index = char_strings)
 week_counts = pd.Series(0, index = char_strings, name = week_start)
+num_day_skip = 7
 
 # generate game_records table in SQL
 # query: select ladder_matches.id as set_id, match_games.id as game_id, season_id, ladder_matches.created_at, match_count, game_number, search_user_id, reply_user_id, search_user_character_unused, reply_user_character_unused, stage_pick, final_result as game_result, results_finalized as set_result from ladder_matches join match_games on ladder_matches.id = match_games.match_id where results_finalized in (1,2) and ladder_id in (3,4) order by ladder_matches.created_at; 
@@ -34,6 +35,7 @@ week_counts = pd.Series(0, index = char_strings, name = week_start)
 
 # loop through each match record to count character participation
 with open('anthers_12_17_2016_wiiu3ds_game_records_pulled_12-20-16_3-50 PM.csv') as f :
+# with open('testmini.txt') as f :
     header = f.readline() # skip first line
     for line in f :
         game_info = line.split(',')
@@ -42,9 +44,9 @@ with open('anthers_12_17_2016_wiiu3ds_game_records_pulled_12-20-16_3-50 PM.csv')
         game_date = dt.datetime.strptime(game_info[3].split()[0], '%Y-%m-%d').date()
         game_char1 = int(game_info[8])
         game_char2 = int(game_info[9])
-        while not week_start <= game_date < week_start + dt.timedelta(days=7) :
+        while not week_start <= game_date < week_start + dt.timedelta(days=num_day_skip) :
             all_counts = pd.concat([all_counts, week_counts], axis=1)
-            week_start = week_start + dt.timedelta(days=7)
+            week_start = week_start + dt.timedelta(days=num_day_skip)
             week_counts = pd.Series(0, index = char_strings, name = week_start)
         week_counts[char_dict[game_char1]] = week_counts[char_dict[game_char1]] + 1
         week_counts[char_dict[game_char2]] = week_counts[char_dict[game_char2]] + 1
@@ -53,5 +55,6 @@ with open('anthers_12_17_2016_wiiu3ds_game_records_pulled_12-20-16_3-50 PM.csv')
 all_counts = pd.concat([all_counts, week_counts], axis=1) 
 
 # save results to file
-all_counts.to_csv('char_use_counts.csv')
+all_counts = all_counts.transpose()
+all_counts.to_csv('char_use_counts.csv', index_label='Dates')
 

@@ -2,7 +2,16 @@
 
 library(ggplot2)
 
-dat <- read.table('char_use_counts.csv', header=T, sep=',', row.names=1)
+# dat <- read.table('char_use_counts.csv', header=T, sep=',', row.names=1)
+dat <- read.table('char_use_counts.csv', header=T, sep=',')
+
+row_to_date<-function(X) {
+    X_parse<-strsplit(X, 'X')[[1]][2]
+    X_date<-as.Date(X_parse, '%Y.%m.%d')
+    return(X_date)
+}
+
+usage_dates<-unlist(lapply(rownames(dat_mini2), row_to_date))
 
 csums <- colSums(dat)
 
