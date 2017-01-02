@@ -27,7 +27,11 @@ compare_counts <- data.frame(Dates=as.Date(dat_all_all[,1]),
     DR=rowSums(dat_3ds_ranked[,-1])/2,
     DU=rowSums(dat_3ds_unranked[,-1])/2)
 
-plot_df <- gather(compare_counts, key=Game_Type, value=Games_Played, -Dates)
+plot_df <- compare_counts %>% gather(key=Game_Type, value=Games_Played, -Dates) %>% separate(col=Game_Type, sep=1, into=c('Ladder', 'Ranked'))
 
+rcolors<-c('grey30', 'tomato', 'dodgerblue')
 
-ggplot(plot_df, aes(x=Dates, y=Games_Played, color=Game_Type)) + geom_line() + geom_point()
+outplot<-ggplot(plot_df, aes(x=Dates, y=Games_Played)) + geom_line(aes(colour=Ladder, linetype=Ranked)) + scale_linetype_manual(values=c('solid', 'dashed', 'dotted'), name='Ranked game?', labels=c('all', 'ranked', 'unranked')) + scale_color_manual(values=rcolors, name='Game platform', labels=c('all', '3ds', 'wii u')) + scale_x_date(breaks = pretty_breaks(10))
+
+ggsave(file='games_played_by_gametype.png', width=12, height=5, dpi=150, plot=outplot)
+
