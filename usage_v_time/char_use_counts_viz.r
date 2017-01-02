@@ -14,6 +14,8 @@ counts[,1]<-as.Date(counts[,1])
 total_week_counts<-rowSums(counts[,-1])
 use_shares<-cbind(Dates=counts[,1], counts[,-1]/total_week_counts)
 
+ggplot(use_shares, aes(x=Dates, y=Bayonetta)) + geom_line() + geom_point() + geom_smooth() + scale_x_date(breaks = pretty_breaks(10))
+
 # fractional usage shifted to represent over/under usage relative to uniform distribution
 # (frac_use - exp_use)/exp_use unbounded on top but min is -1
 # kinda want more like fold off: if exp usage is 10%, then 20% is +1, 5% is -1
