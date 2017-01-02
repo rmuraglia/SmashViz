@@ -48,11 +48,13 @@ with open('anthers_12_21_2016_wiiu3ds_game_records_pulled_1-1-17_9-32 PM.csv') a
     header = f.readline() # skip first line
     for line in f :
         game_info = line.split(',')
-        null_vec = [x=='NULL' for x in [game_info[3], game_info[8], game_info[9]]]
-        if any(null_vec) : continue        
+        # skip invalid games
+        pass_vec = [game_info[3]=='NULL', len(game_info[9].split('-')) != 2]
+        if any(pass_vec) : continue
         game_date = dt.datetime.strptime(game_info[3].split()[0], '%Y-%m-%d').date()
-        game_char1 = int(game_info[8])
-        game_char2 = int(game_info[9])
+        game_chars = game_info[9].split('-')
+        game_char1 = int(game_chars[0])
+        game_char2 = int(game_chars[1])
         while not week_start <= game_date < week_start + dt.timedelta(days=num_day_skip) :
             all_counts = pd.concat([all_counts, week_counts], axis=1)
             week_start = week_start + dt.timedelta(days=num_day_skip)
