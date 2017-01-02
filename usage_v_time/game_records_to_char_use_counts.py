@@ -30,7 +30,6 @@ week_counts = pd.Series(0, index = char_strings, name = week_start)
 num_day_skip = 7
 
 # generate game_records table in SQL
-# query: select ladder_matches.id as set_id, match_games.id as game_id, season_id, ladder_matches.created_at, match_count, game_number, search_user_id, reply_user_id, search_user_character_unused, reply_user_character_unused, stage_pick, final_result as game_result, results_finalized as set_result from ladder_matches join match_games on ladder_matches.id = match_games.match_id where results_finalized in (1,2) and ladder_id in (3,4) order by ladder_matches.created_at; 
 """
 query:
 select ladder_matches.id as set_id, match_games.id as game_id, season_id, ladder_matches.created_at, type, match_count, game_number, group_concat(match_game_character_selections.player_id order by match_game_character_selections.id separator '-') as player_ids, group_concat(distinct match_players.player_id) as team1_id, group_concat(match_game_character_selections.character_id order by match_game_character_selections.id separator '-') as character_ids, stage_pick, final_result as game_result, results_finalized as set_result 
