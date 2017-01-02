@@ -35,3 +35,9 @@ outplot<-ggplot(plot_df, aes(x=Dates, y=Games_Played)) + geom_line(aes(colour=La
 
 ggsave(file='games_played_by_gametype.png', width=12, height=5, dpi=150, plot=outplot)
 
+# focus only on ranked matches
+ranked_df <- compare_counts %>% select(Dates, AR, WR, DR) %>%
+    gather(key=Game_Type, value=Games_Played, -Dates)
+rank_plot<-ggplot(ranked_df, aes(x=Dates, y=Games_Played)) + geom_line(aes(colour=Game_Type)) + scale_color_manual(values=rcolors, name='Game platform', labels=c('all', '3ds', 'wii u')) + scale_x_date(breaks=pretty_breaks(10)) + ylab('Ranked matches played each week')
+ggsave(file='ranked_games_played.png', width=12, height=5, dpi=150, plot=rank_plot)
+
