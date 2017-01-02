@@ -4,7 +4,7 @@ import datetime as dt
 import mysql.connector
 
 # open connection to database
-cnx = mysql.connector.connect(database='anthers_12_17_2016', option_files='/Users/rmuraglia/.my.cnf')
+cnx = mysql.connector.connect(database='anthers_12_21_2016', option_files='/Users/rmuraglia/.my.cnf')
 cur = cnx.cursor()
 
 # create dictionary to map character ID to character string
@@ -61,6 +61,9 @@ all_counts.to_csv('char_use_counts.csv', index_label='Dates')
 """
 possible new query for new DB struct - still have to refine but this type of group by and group_concat is what I want
 
-select match_id as set_id, match_games.id as game_id, created_at, game_number, stage_pick, final_result, group_concat(match_game_character_selections.character_id separator '-') as char_ids from match_games join match_game_character_selections on match_games.id = match_game_character_selections.match_game_id where match_games.id in (1, 2, 3, 4, 5, 6) group by game_id;
+select ladder_matches.id as set_id, match_games.id as game_id, season_id, match_games.created_at, match_count, game_number, group_concat(match_game_character_selections.player_id order by match_game_character_selections.id separator '-') as player_ids, group_concat(match_game_character_selections.character_id order by match_game_character_selections.id separator '-') as character_ids, stage_pick, final_result as game_result, results_finalized as set_result from ladder_matches join match_games join match_game_character_selections on ladder_matches.id = match_games.match_id and match_games.id = match_game_character_selections.match_game_id where results_finalized in (1,2) and ladder_id in (3,4) group by game_id limit 25;
+order by match_games.created_at
+
+still need a part to now report the team assignments
 """
 
