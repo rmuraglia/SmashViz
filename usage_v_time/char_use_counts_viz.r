@@ -134,12 +134,74 @@ ifelse(!dir.exists('all_ranked/signif_users/'), dir.create('all_ranked/signif_us
 # analysis on wii u ranked matches only
 ####
 
+# create output directory
+ifelse(!dir.exists('wiiu_ranked'), dir.create('wiiu_ranked'), FALSE)
+
+## based on game participation count
+wiiu_counts <- read.table('char_use_counts_wiiu_ranked.csv', header=T, sep=',')
+wiiu_counts[,1]<-as.Date(wiiu_counts[,1])
+
+# drop 'random' character stats
+wiiu_counts <- select(wiiu_counts, -Random)
+
+# drop weeks preceding wii u release
+wiiu_counts <- wiiu_counts %>% filter(rowSums(.[,-1])!=0)
+
+# raw fractional usage
+wiiu_total_counts<-rowSums(wiiu_counts[,-1]) # total number of character picks for each week
+wiiu_frac_use<-data.frame(Dates=wiiu_counts[,1], wiiu_counts[,-1]/wiiu_total_counts)
 
 
+# prune out zero values preceding character release
+wiiu_frac_use <- wiiu_frac_use %>% 
+    mutate(Bayonetta = prune_zeros(Bayonetta), Cloud = prune_zeros(Cloud), Corrin = prune_zeros(Corrin), Lucas = prune_zeros(Lucas),Mewtwo = prune_zeros(Mewtwo), Roy = prune_zeros(Roy), Ryu = prune_zeros(Ryu))
 
+# initial look at each character with no annotations
+ifelse(!dir.exists('wiiu_ranked/frac_counts/'), dir.create('wiiu_ranked/frac_counts/'), FALSE)
 
+for (i in colnames(wiiu_frac_use)[-1]) {
+    wiiu_frac_plot<-ggplot(wiiu_frac_use, aes_string(x='Dates', y=i)) + geom_line() + geom_point() + geom_smooth(span=0.5) + scale_x_date(breaks=pretty_breaks(10)) + labs(y='Fractional usage rate (per week)', title=i) 
+    ggsave(file=paste('wiiu_ranked/frac_counts/', i, '.png', sep=''), width=10, height=5, dpi=150, plot=wiiu_frac_plot)
+}
 
+# fold over/under-representation, corrected by number of available characters
 
+wiiu_num_avail_chars<-apply(wiiu_frac_use[,-1], 1, function(x) sum(!is.na(x)))
+wiiu_expected_usage<-1/wiiu_num_avail_chars
+
+wiiu_fold_use <- wiiu_frac_use %>% select(-Dates) %>% data.matrix(.) %>% 
+    mapply(calc_fold, ., wiiu_expected_usage) %>%
+    matrix(., nrow=nrow(wiiu_frac_use), dimnames=dimnames(select(wiiu_frac_use, -Dates))) %>%
+    data.frame(Dates=wiiu_counts[,1], .)
+
+ifelse(!dir.exists('wiiu_ranked/fold_use/'), dir.create('wiiu_ranked/fold_use'), FALSE)
+
+for (i in colnames(wiiu_fold_use)[-1]) {
+
+    # subset to character of interest and create base plot
+    plot_df<-select(wiiu_fold_use, Dates, one_of(i))
+    outplot<-ggplot(plot_df, aes_string(x='Dates', y=i)) + geom_bar(aes_string(fill=i), stat='identity') + scale_x_date(breaks=pretty_breaks(10)) + coord_cartesian(xlim=range(plot_df[,1])) + labs(y='Fold usage relative to uniform (per week)', title=i) + gradcols
+
+    # make adjustments for extremes if necessary
+    fold_range<-range(plot_df[,2], na.rm=TRUE)
+    adj_bool<-c(fold_range[1]<colorbar_lims[1], fold_range[2]>colorbar_lims[2])
+    if (any(adj_bool)) {
+        if (adj_bool[1]) { # need to fix low extremes
+            if (fold_range[1]<ylim_floor) { # need to fix plot limits
+                outplot <- outplot + coord_cartesian(ylim=c(ylim_floor, max(c(0, plot_df[,2]))))
+            }
+            low_dat<-plot_df
+            low_dat[which(!(low_dat[,2]<colorbar_lims[1])), 2] <- 0
+            outplot <- outplot + geom_bar(data=low_dat, fill=low_col, stat='identity')
+        }
+        if (adj_bool[2]) { # need to fix high extremes
+            high_dat<-plot_df
+            high_dat[which(!(high_dat[,2]>colorbar_lims[2])), 2] <- 0
+            outplot <- outplot + geom_bar(data=high_dat, fill=high_col, stat='identity')
+        }
+    }
+    ggsave(file=paste('wiiu_ranked/fold_use/', i, '.png', sep=''), width=10, height=5, dpi=150, plot=outplot)
+}
 
 
 ### testing area
