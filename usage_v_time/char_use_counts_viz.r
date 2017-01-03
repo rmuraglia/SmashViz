@@ -75,6 +75,14 @@ all_fold_use <- all_frac_use %>% select(-Dates) %>% data.matrix(.) %>%
 
 ifelse(!dir.exists('all_ranked/fold_use/'), dir.create('all_ranked/fold_use'), FALSE)
 
+# see range of min/max multipliers to determine reasonable colorbar
+# all_fold_use %>% select(-Dates) %>% summarise_each(funs(min(., na.rm=TRUE), max(., na.rm=TRUE))) %>% sort(.)
+
+# example line plot style
+ggplot(all_fold_use, aes(x=Dates, y=Little.Mac)) + geom_point(aes(colour=Little.Mac)) + geom_line(aes(colour=Little.Mac)) + scale_colour_gradientn(colours=c('blue', 'blue1', 'blue2', 'blue3', 'grey30', 'red3', 'red2', 'red1', 'red'), limits=c(-5, 5))
+
+# example bar plot style (better color representation)
+ggplot(all_fold_use, aes(x=Dates, y=Little.Mac)) + geom_bar(aes(fill=Little.Mac), stat='identity') + scale_fill_gradientn(colours=c('blue', 'blue1', 'blue2', 'blue3', 'grey30', 'red3', 'red2', 'red1', 'red'), limits=c(-5, 5))
 
 
 # template
