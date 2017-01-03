@@ -79,18 +79,47 @@ ifelse(!dir.exists('all_ranked/fold_use/'), dir.create('all_ranked/fold_use'), F
 # all_fold_use %>% select(-Dates) %>% summarise_each(funs(min(., na.rm=TRUE), max(., na.rm=TRUE))) %>% sort(.)
 
 # example line plot style
-ggplot(all_fold_use, aes(x=Dates, y=Little.Mac)) + geom_point(aes(colour=Little.Mac)) + geom_line(aes(colour=Little.Mac)) + scale_colour_gradientn(colours=c('blue', 'blue1', 'blue2', 'blue3', 'grey30', 'red3', 'red2', 'red1', 'red'), limits=c(-5, 5))
+# ggplot(all_fold_use, aes(x=Dates, y=Little.Mac)) + geom_point(aes(colour=Little.Mac)) + geom_line(aes(colour=Little.Mac)) + scale_colour_gradientn(colours=c('blue', 'blue1', 'blue2', 'blue3', 'grey30', 'red3', 'red2', 'red1', 'red'), limits=c(-5, 5), name='fold usage')
 
 # example bar plot style (better color representation)
-ggplot(all_fold_use, aes(x=Dates, y=Little.Mac)) + geom_bar(aes(fill=Little.Mac), stat='identity') + scale_fill_gradientn(colours=c('blue', 'blue1', 'blue2', 'blue3', 'grey30', 'red3', 'red2', 'red1', 'red'), limits=c(-5, 5))
+# ggplot(all_fold_use, aes(x=Dates, y=Little.Mac)) + geom_bar(aes(fill=Little.Mac), stat='identity') + scale_fill_gradientn(name='fold usage', colours=c('blue', 'blue1', 'blue2', 'blue3', 'grey30', 'red3', 'red2', 'red1', 'red'), limits=c(-5, 5))
+
+# set params for limits of colorbar and plotting window
+colorbar_lims<-c(-5, 5)
+colorbar_cols<-c('blue1', 'blue2', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red2', 'red1')
+gradcols<-scale_fill_gradientn(name='fold usage', colours=colorbar_cols, limits=colorbar_lims)
+ylim_floor <- -10
+low_col<-'blue'
+high_col<-'red'
 
 
-# template
-for (i in colnames(all_frac_use)[-1]) {
-    all_frac_plot<-ggplot(all_frac_use, aes_string(x='Dates', y=i)) + geom_line() + geom_point() + geom_smooth(span=0.5) + scale_x_date(breaks=pretty_breaks(10)) + labs(y='Fractional usage rate (per week)', title=i) 
-    ggsave(file=paste('all_ranked/raw_counts/', i, '.png', sep=''), width=10, height=5, dpi=150, plot=all_frac_plot)
+for (i in colnames(all_fold_use)[-1]) {
+
+    # subset to character of interest and create base plot
+    plot_df<-select(all_fold_use, Dates, one_of(i))
+    outplot<-ggplot(plot_df, aes_string(x='Dates', y=i)) + geom_bar(aes_string(fill=i), stat='identity') + scale_x_date(breaks=pretty_breaks(10)) + coord_cartesian(xlim=range(plot_df[,1])) + labs(y='Fold usage relative to uniform (per week)', title=i) + gradcols
+
+    # make adjustments for extremes if necessary
+    fold_range<-range(plot_df[,2], na.rm=TRUE)
+    adj_bool<-c(fold_range[1]<colorbar_lims[1], fold_range[2]>colorbar_lims[2])
+    if (any(adj_bool)) {
+        if (adj_bool[1]) { # need to fix low extremes
+            if (fold_range[1]<ylim_floor) { # need to fix plot limits
+                outplot <- outplot + coord_cartesian(ylim=c(ylim_floor, max(c(0, plot_df[,2]))))
+            }
+            low_dat<-plot_df
+            low_dat[which(!(low_dat[,2]<colorbar_lims[1])), 2] <- 0
+            outplot <- outplot + geom_bar(data=low_dat, fill=low_col, stat='identity')
+        }
+        if (adj_bool[2]) { # need to fix high extremes
+            high_dat<-plot_df
+            high_dat[which(!(high_dat[,2]>colorbar_lims[2])), 2] <- 0
+            outplot <- outplot + geom_bar(data=high_dat, fill=high_col, stat='identity')
+        }
+    }
+    ggsave(file=paste('all_ranked/fold_use/', i, '.png', sep=''), width=10, height=5, dpi=150, plot=outplot)
 }
-# template
+
 
 ## based on unique users count
 
