@@ -4,25 +4,113 @@ library(ggplot2)
 library(tidyverse)
 library(scales)
 
-# raw counts
-# current data source uses all matches - consider stratifying by ranked/unranked
-# currently shows number of games character participated in. perhaps consider having a more user-centric metric (ie number of players using X as main during this week) - this can help control for low tier variance if the cause is a given player having a week with many matches
-counts <- read.table('char_use_counts.csv', header=T, sep=',')
-counts[,1]<-as.Date(counts[,1])
+####
+# PART 1
+# analysis on all ranked matches (3ds + wii u)
+####
 
-# fractional usage
-total_week_counts<-rowSums(counts[,-1])
-use_shares<-cbind(Dates=counts[,1], counts[,-1]/total_week_counts)
+# create output directory
+ifelse(!dir.exists('all_ranked'), dir.create('all_ranked'), FALSE)
 
-ggplot(use_shares, aes(x=Dates, y=Bayonetta)) + geom_line() + geom_point() + geom_smooth() + scale_x_date(breaks = pretty_breaks(10))
+## based on game participation count
+all_counts <- read.table('char_use_counts_all_ranked.csv', header=T, sep=',')
+all_counts[,1]<-as.Date(all_counts[,1])
 
-# fractional usage shifted to represent over/under usage relative to uniform distribution
-# (frac_use - exp_use)/exp_use unbounded on top but min is -1
-# kinda want more like fold off: if exp usage is 10%, then 20% is +1, 5% is -1
-# if neg, multiply by reciprocal?
-# not complete - need to account for number of characters available
-# see http://www.ssbwiki.com/Downloadable_content#Characters for character introduction dates
-chars_avail<-rep(NA, length.out=nrow(use_shares))
+# drop 'random' character stats
+all_counts <- select(all_counts, -Random)
+
+# raw fractional usage
+all_total_counts<-rowSums(all_counts[,-1]) # total number of character picks for each week
+all_frac_use<-data.frame(Dates=all_counts[,1], all_counts[,-1]/all_total_counts)
+
+# prune out zero values preceding character release
+prune_zeros<-function(X) {
+    first_nonzero<-which(X!=0)[1]
+    X[1:(first_nonzero-1)]<-NA
+    return(X)
+}
+
+all_frac_use <- all_frac_use %>% 
+    mutate(Bayonetta = prune_zeros(Bayonetta), Cloud = prune_zeros(Cloud), Corrin = prune_zeros(Corrin), Lucas = prune_zeros(Lucas),Mewtwo = prune_zeros(Mewtwo), Roy = prune_zeros(Roy), Ryu = prune_zeros(Ryu))
+
+# individual character plot by name
+# ggplot(all_frac_use, aes(x=Dates, y=Mario)) + geom_line() + geom_point() + geom_smooth(span=0.75) + scale_x_date(breaks=pretty_breaks(10))
+
+# individual character plot by index
+# ggplot(all_frac_use, aes_string(x='Dates', y=colnames(all_frac_use)[27])) + geom_line() + geom_point() + geom_smooth() + scale_x_date(breaks=pretty_breaks(10))
+
+# initial look at each character with no annotations
+ifelse(!dir.exists('all_ranked/frac_counts/'), dir.create('all_ranked/frac_counts/'), FALSE)
+
+for (i in colnames(all_frac_use)[-1]) {
+    all_frac_plot<-ggplot(all_frac_use, aes_string(x='Dates', y=i)) + geom_line() + geom_point() + geom_smooth(span=0.5) + scale_x_date(breaks=pretty_breaks(10)) + labs(y='Fractional usage rate (per week)', title=i) 
+    ggsave(file=paste('all_ranked/frac_counts/', i, '.png', sep=''), width=10, height=5, dpi=150, plot=all_frac_plot)
+}
+
+# fold over/under-representation, corrected by number of available characters
+
+num_avail_chars<-apply(all_frac_use[,-1], 1, function(x) sum(!is.na(x)))
+expected_usage<-1/num_avail_chars
+
+# for each observed usage rate, you can turn it into a fold change as such:
+# goal: if obs = exp -> 0, obs = 2*exp -> 1, obs = exp/2 -> -1, obs = 3*exp -> 2
+# for positive fold changes: obs = exp * (fold + 1)
+# for negative fold changes: obs = exp * (1/(-fold + 1))
+calc_fold<-function(x, expected) {
+    if (is.na(x)) {
+        fold <- NA
+    } else if (x < expected) { 
+        fold <- 1 - expected/x
+    } else { 
+        fold <- x/expected - 1
+    }
+    return(fold)
+}
+
+# remember that the period is a placeholder for whatever you're piping in
+all_fold_use <- all_frac_use %>% select(-Dates) %>% data.matrix(.) %>% 
+    mapply(calc_fold, ., expected_usage) %>%
+    matrix(., nrow=nrow(all_frac_use), dimnames=dimnames(select(all_frac_use, -Dates))) %>%
+    data.frame(Dates=all_counts[,1], .)
+
+ifelse(!dir.exists('all_ranked/fold_use/'), dir.create('all_ranked/fold_use'), FALSE)
+
+
+
+# template
+for (i in colnames(all_frac_use)[-1]) {
+    all_frac_plot<-ggplot(all_frac_use, aes_string(x='Dates', y=i)) + geom_line() + geom_point() + geom_smooth(span=0.5) + scale_x_date(breaks=pretty_breaks(10)) + labs(y='Fractional usage rate (per week)', title=i) 
+    ggsave(file=paste('all_ranked/raw_counts/', i, '.png', sep=''), width=10, height=5, dpi=150, plot=all_frac_plot)
+}
+# template
+
+## based on unique users count
+
+ifelse(!dir.exists('all_ranked/frac_users/'), dir.create('all_ranked/frac_users/'), FALSE)
+
+## based on number of users with significant usage (greater than 25% of plays)
+
+ifelse(!dir.exists('all_ranked/signif_users/'), dir.create('all_ranked/signif_users/'), FALSE)
+
+####
+# PART 2
+# analysis on wii u ranked matches only
+####
+
+
+
+
+
+
+
+
+
+### testing area
+
+
+
+
+### old annotations
 
 # luigi nerfs:
 # 1.1.0 - July 30 2015 - fireball nerf - 42
@@ -46,16 +134,3 @@ for (i in 1:nrow(dat)) {
 # nairo uses doc vs esam at MLG worlds (10/19/2015) - 53
 qplot(1:114, dat_shares[11,], geom=c('point', 'line'), ylab='Dr. Mario usage shares') + geom_vline(xintercept = 53, linetype = 'dashed', colour='red') + geom_smooth()
 
-
-
-### testing area
-tim<-counts[1:5,1:6]
-total_week_counts<-rowSums(tim[,-1])
-
-use_shares<-cbind()
-
-tim <- tim %>% select(-Dates) %>% mutate(total_use = rowSums(.))
-tim<-tim/tim$total_use
-
-
-ggplot(use_shares, aes(x=Dates, y=Bayonetta)) + geom_line() + geom_point() + geom_smooth() + scale_x_date(breaks = pretty_breaks(10))
