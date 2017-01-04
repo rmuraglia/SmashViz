@@ -1,6 +1,8 @@
+# game_records_to_unique_user_char_counts.py
+
 import numpy as np
-import pandas as pd
-import datetime as dt
+import pandas as pd 
+import datetime as dt 
 import mysql.connector
 
 # open connection to database
@@ -43,8 +45,8 @@ export in sequel pro, or use `select into outfile` syntax
 """
 
 game_records_filename = 'anthers_12_21_2016_wiiu3ds_game_records_pulled_1-1-17_9-32 PM.csv'
+# game_records_filename = 'testmini.csv'
 
-# count character participation
 
 def gen_pass_vec(game_info, ladder_id, rank_type) :
     # if any of the 'pass' variables are True, then we skip the record
@@ -54,6 +56,9 @@ def gen_pass_vec(game_info, ladder_id, rank_type) :
 
     # improper number of participating characters
     pass_chars = len(game_info[9].split('-')) != 2
+
+    # improper number of participating users
+    pass_users = len(game_info[7].split('-')) != 2
 
     # improper season_id for the desired game
     if ladder_id == 'wiiu' :
@@ -71,26 +76,41 @@ def gen_pass_vec(game_info, ladder_id, rank_type) :
     else :
         pass_type = False
 
-    return [pass_date, pass_chars, pass_ladder, pass_type]
+    return [pass_date, pass_chars, pass_users, pass_ladder, pass_type]
 
-def char_counts(ladder_id, rank_type) :
+def gen_char_user_sets(character_list) :
+    X = {}
+    for x in character_list :
+        X[x] = set()
+    return X
+
+def tally_unique_users(char_user_sets, week_start) :
+    week_counts = pd.Series(0, index = char_strings, name = week_start)
+    for i in char_user_sets.keys() :
+        week_counts[i] = len(char_user_sets[i])
+    return week_counts
+
+def unique_user_counts(ladder_id, rank_type) :
     """
-    produce a table for character usage counts on a weekly basis
-    ladder_id variable takes values { 'all', 'wiiu', '3ds' } for game based filtering
-    rank_type takes values { 'all', 'ranked', 'unranked' } for match type filtering
+    produce a table for the number of unique users that used a character in a given week
+    ladder_id = {'all', 'wiiu', '3ds'}
+    rank_type = {'all', 'ranked', 'unranked'}
     """
 
     if ladder_id not in ['all', 'wiiu', '3ds'] or rank_type not in ['all', 'ranked', 'unranked'] :
         print "Please enter valid values for ladder_id and rank_type."
         return None
 
-    # initiate empty objects to hold counts for all time and week
+    # initiate empty objects to hold character counts per week and all time
     week_start = dt.date(2014, 10, 15)
     all_counts = pd.DataFrame(index = char_strings)
     week_counts = pd.Series(0, index = char_strings, name = week_start)
     num_day_skip = 7
 
-    # loop through each match record to count character participation
+    # initiate empty object to hold unique character users
+    char_user_sets = gen_char_user_sets(char_strings)
+
+    # loop through each match record
     with open(game_records_filename) as f :
         header = f.readline() # skip first line
         for line in f :
@@ -101,21 +121,59 @@ def char_counts(ladder_id, rank_type) :
             game_chars = game_info[9].split('-')
             game_char1 = int(game_chars[0])
             game_char2 = int(game_chars[1])
+            game_users = game_info[7].split('-')
+            game_user1 = int(game_users[0])
+            game_user2 = int(game_users[1])
+            # if the game did not take place during the 'current week', then tally results from previous week and keep on moving time forward until we're in the appropriate week for the game to start new counts
             while not week_start <= game_date < week_start + dt.timedelta(days=num_day_skip) :
+                week_counts = tally_unique_users(char_user_sets, week_start)
                 all_counts = pd.concat([all_counts, week_counts], axis=1)
-                week_start = week_start + dt.timedelta(days=num_day_skip)
-                week_counts = pd.Series(0, index = char_strings, name = week_start)
-            week_counts[char_dict[game_char1]] = week_counts[char_dict[game_char1]] + 1
-            week_counts[char_dict[game_char2]] = week_counts[char_dict[game_char2]] + 1
+                week_start = week_start + dt.timedelta(days = num_day_skip)
+                char_user_sets = gen_char_user_sets(char_strings)
+            char_user_sets[char_dict[game_char1]].add(game_user1)
+            char_user_sets[char_dict[game_char2]].add(game_user2)
 
-    # add last set of records to table 
+    # add last set of records to table
+    week_counts = tally_unique_users(char_user_sets, week_start)
     all_counts = pd.concat([all_counts, week_counts], axis=1)
 
     # save results to file
     all_counts = all_counts.transpose()
-    outfilename = 'char_use_counts_' + ladder_id + '_' + rank_type + '.csv'
+    outfilename = 'unique_user_counts_' + ladder_id + '_' + rank_type + '.csv'
     all_counts.to_csv(outfilename, index_label='Dates')
     return all_counts
 
-counts_df = char_counts('all', 'all')
+unique_all = unique_user_counts('all', 'ranked')
+unique_wiiu = unique_user_counts('wiiu', 'ranked')
 
+def signif_user_counts(ladder_id, rank_type, alpha) :
+    """
+    produce a table for the number of unique users that used a character in a given week
+    ladder_id = {'all', 'wiiu', '3ds'}
+    rank_type = {'all', 'ranked', 'unranked'}
+    alpha = [0, 1] : fraction of games played by a user on a character to be considered significant usage of that character
+    """
+
+    if ladder_id not in ['all', 'wiiu', '3ds'] or rank_type not in ['all', 'ranked', 'unranked'] or not 0 <= alpha <= 1 :
+        print "Please enter valid values for ladder_id, rank_type and alpha."
+        return None
+
+"""
+notes and testing area
+
+tim = some dict
+tom = pd.DataFrame(tim.items(), columns=['character', 'counts'])
+carl = tom['counts']/sum(tom['counts'])
+tom['character'][np.where(carl>=0.1)[0]]
+
+set_id,game_id,season_id,created_at,type,match_count,game_number,player_ids,team1_id,character_ids,stage_pick,game_result,set_result
+303562,94446,4,2014-10-15 15:45:06,2,3,1,8245-7366,8245,82-104,54,2,2
+303562,94470,4,2014-10-15 15:45:06,2,3,2,8245-7366,8245,82-104,49,2,2
+303659,94482,4,2014-10-15 16:02:04,2,3,1,2210-7366,2210,119-104,53,2,2
+303659,94499,4,2014-10-15 16:02:04,2,3,2,2210-7366,2210,119-104,50,2,2
+303665,94483,4,2014-10-15 16:03:08,2,3,1,8640-8245,8640,108-82,52,1,1
+303665,94504,4,2014-10-15 16:03:08,2,3,2,8640-8245,8640,108-82,49,1,1
+303740,94526,4,2014-10-15 16:25:12,2,3,1,7366-8640,7366,104-108,52,1,1
+303740,94541,4,2014-10-15 16:25:12,2,3,2,7366-8640,7366,104-108,54,2,1
+303740,94553,4,2014-10-15 16:25:12,2,3,3,7366-8640,7366,104-108,54,1,1
+"""

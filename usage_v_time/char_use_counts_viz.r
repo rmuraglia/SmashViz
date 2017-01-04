@@ -125,7 +125,7 @@ for (i in colnames(all_fold_use)[-1]) {
 
 ifelse(!dir.exists('all_ranked/frac_users/'), dir.create('all_ranked/frac_users/'), FALSE)
 
-## based on number of users with significant usage (greater than 25% of plays)
+## based on number of users with significant usage (greater than 20% of plays)
 
 ifelse(!dir.exists('all_ranked/signif_users/'), dir.create('all_ranked/signif_users/'), FALSE)
 
