@@ -1,3 +1,10 @@
+# game_records_to_char_use_counts.py
+
+"""
+convert raw game records to per-week character usage counts
+character usage determined as simply number of games character was used in
+"""
+
 import numpy as np
 import pandas as pd
 import datetime as dt
@@ -42,7 +49,7 @@ order by ladder_matches.created_at;
 export in sequel pro, or use `select into outfile` syntax
 """
 
-game_records_filename = 'anthers_12_21_2016_wiiu3ds_game_records_pulled_1-1-17_9-32 PM.csv'
+game_records_filename = 'raw_game_records/anthers_12_21_2016_wiiu3ds_game_records_pulled_1-1-17_9-32 PM.csv'
 
 # count character participation
 
@@ -117,5 +124,5 @@ def char_counts(ladder_id, rank_type) :
     all_counts.to_csv(outfilename, index_label='Dates')
     return all_counts
 
-counts_df = char_counts('all', 'all')
+counts_df = char_counts('wiiu', 'ranked')
 
