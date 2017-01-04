@@ -1,6 +1,6 @@
-first_out/*
-anthers_12_21_2016_wiiu3ds_game_records_pulled_1-1-17_9-32 PM.csv
 testmini.*
-*.csv
-all_ranked/**
-wiiu_ranked/**
+game_events.txt
+possible_usage_triggers.txt
+raw_game_records/*
+parsed_char_counts/*
+figures/**

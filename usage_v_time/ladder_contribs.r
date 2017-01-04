@@ -1,5 +1,9 @@
 # ladder_contribs.r
 
+# check how many games are being played on anther's ladder per week, divided up by:
+# game platform: wii u, 3ds or all
+# game type: ranked, unranked or all
+
 library(ggplot2)
 library(scales)
 library(tidyverse)
