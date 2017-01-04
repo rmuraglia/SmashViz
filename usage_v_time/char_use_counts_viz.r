@@ -8,6 +8,9 @@ library(ggplot2)
 library(tidyverse)
 library(scales)
 
+# uncomment for troubleshooting
+# ladder_type<-'wiiu'; rank_type<-'ranked'; count_type<-'unique_user'; plot_type<-'fold_use'
+
 viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
 
     # usage:
@@ -41,6 +44,22 @@ viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
     trim_dat <- trim_dat %>% mutate(Bayonetta = prune_zeros(Bayonetta), 
         Cloud = prune_zeros(Cloud), Corrin = prune_zeros(Corrin), Lucas = prune_zeros(Lucas),
         Mewtwo = prune_zeros(Mewtwo), Roy = prune_zeros(Roy), Ryu = prune_zeros(Ryu))
+
+    # set framing params for fold_use case
+    if (plot_type == 'fold_use') {
+        if (count_type == 'char_use') {
+            cbar_lim <- 5; y_floor <- -10
+            cbar_cols <- c('blue1', 'blue2', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red2', 'red1')
+
+        } else if (count_type == 'unique_user') {
+            cbar_lim <- 2.5; y_floor <- -5
+            cbar_cols <- c('blue1', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red1')
+
+        } else if (count_type == 'signif_user') {
+            cbar_lim <- 2.5; y_floor <- -5
+            cbar_cols <- c('blue1', 'blue2', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red2', 'red1')
+        }
+    }
     
     # use appropriate data transformation depending on plot choice then generate and save plots
     if (plot_type == 'raw') {
@@ -51,7 +70,7 @@ viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
         plot_frac_use(xfo_dat, level2_dir)
     } else if (plot_type == 'fold_use') {
         xfo_dat <- xfo_to_fold_use(trim_dat)
-        plot_fold_use(xfo_dat, level2_dir, 5, -10)
+        plot_fold_use(xfo_dat, level2_dir, cbar_lim, y_floor, cbar_cols)
     }
 }
 
@@ -113,11 +132,11 @@ calc_fold<-function(x, expected) {
     return(fold)
 }
 
-plot_fold_use<-function(X, fig_dir, cbar_lim, y_floor) {
+plot_fold_use<-function(X, fig_dir, cbar_lim, y_floor, cbar_cols) {
     # cbar_lim gives the limits for the colorbar
     # y_floor gives the lowest y value to plot
     # for char_use, 5 and -10 are resonably values
-    # for unique_user, STILL NEED TO DETERMINE VALS
+    # for unique_user, 2.5 and -5
     # for signif_user, STILL NEED TO DETERMINE VALS
     
     # if want to see range to inform param guesses, use:
@@ -125,7 +144,6 @@ plot_fold_use<-function(X, fig_dir, cbar_lim, y_floor) {
 
     # make colorbar for majority of values
     cbar_lims <- c(-cbar_lim, cbar_lim)
-    cbar_cols <- c('blue1', 'blue2', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red2', 'red1')
     cbar <- scale_fill_gradientn(name='fold usage', colours=cbar_cols, limits=cbar_lims)
 
     # set extreme colors
