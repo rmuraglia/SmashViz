@@ -8,11 +8,6 @@ library(ggplot2)
 library(tidyverse)
 library(scales)
 
-ladder_type = '3ds'
-rank_type = 'all'
-count_type = 'char_use'
-plot_type = 'fold_use'
-
 viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
 
     # usage:
@@ -58,10 +53,6 @@ viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
         xfo_dat <- xfo_to_fold_use(trim_dat)
         plot_fold_use(xfo_dat, level2_dir, 5, -10)
     }
-
-
-    
-
 }
 
 prune_zeros<-function(X) {
@@ -82,7 +73,7 @@ plot_raw<-function(X, fig_dir) {
 
 xfo_to_frac_use<-function(X) {
     # turn into fractional usage (all character contributions sum to 1)
-    week_totals <- rowSums(trim_dat[,-1], na.rm=TRUE)
+    week_totals <- rowSums(X[,-1], na.rm=TRUE)
     X_xfo <- data.frame(Dates = X[,1], X[,-1]/week_totals)
     return(X_xfo)
 }
@@ -171,7 +162,18 @@ plot_fold_use<-function(X, fig_dir, cbar_lim, y_floor) {
     } # cloose loop over characters
 }
 
-
+viz_char_counts('all', 'ranked', 'char_use', 'raw')
+viz_char_counts('all', 'ranked', 'char_use', 'frac_use')
+viz_char_counts('all', 'ranked', 'char_use', 'fold_use')
+viz_char_counts('wiiu', 'ranked', 'char_use', 'raw')
+viz_char_counts('wiiu', 'ranked', 'char_use', 'frac_use')
+viz_char_counts('wiiu', 'ranked', 'char_use', 'fold_use')
+viz_char_counts('all', 'ranked', 'unique_user', 'raw')
+viz_char_counts('all', 'ranked', 'unique_user', 'frac_use')
+viz_char_counts('all', 'ranked', 'unique_user', 'fold_use')
+viz_char_counts('wiiu', 'ranked', 'unique_user', 'raw')
+viz_char_counts('wiiu', 'ranked', 'unique_user', 'frac_use')
+viz_char_counts('wiiu', 'ranked', 'unique_user', 'fold_use')
 
 
 
