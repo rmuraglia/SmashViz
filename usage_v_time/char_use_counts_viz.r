@@ -16,7 +16,7 @@ viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
     # usage:
     # ladder_type = { 'all', 'wiiu', '3ds' }
     # rank_type = { 'all', 'ranked', 'unranked' }
-    # count_type = { 'char_use', 'unique_user', 'signif_user' }
+    # count_type = { 'char_use', 'unique_user', 'signif_user20', 'signif_user30' }
     # plot_type = { 'raw', 'frac_use', 'fold_use' }
 
     # ensure that output directory exists

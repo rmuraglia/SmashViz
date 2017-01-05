@@ -51,9 +51,10 @@ export in sequel pro, or use `select into outfile` syntax
 """
 
 game_records_filename = 'raw_game_records/anthers_12_21_2016_wiiu3ds_game_records_pulled_1-1-17_9-32 PM.csv'
-# game_records_filename = 'testmini.csv'
+# game_records_filename = 'raw_game_records/testmini.csv'
 
 
+# shared helper function
 def gen_pass_vec(game_info, ladder_id, rank_type) :
     # if any of the 'pass' variables are True, then we skip the record
 
@@ -84,17 +85,9 @@ def gen_pass_vec(game_info, ladder_id, rank_type) :
 
     return [pass_date, pass_chars, pass_users, pass_ladder, pass_type]
 
-def gen_char_user_sets(character_list) :
-    X = {}
-    for x in character_list :
-        X[x] = set()
-    return X
-
-def tally_unique_users(char_user_sets, week_start) :
-    week_counts = pd.Series(0, index = char_strings, name = week_start)
-    for i in char_user_sets.keys() :
-        week_counts[i] = len(char_user_sets[i])
-    return week_counts
+###
+# generate counts based on number of unique users
+###
 
 def unique_user_counts(ladder_id, rank_type) :
     """
@@ -107,11 +100,10 @@ def unique_user_counts(ladder_id, rank_type) :
         print "Please enter valid values for ladder_id and rank_type."
         return None
 
-    # initiate empty objects to hold character counts per week and all time
+    # initiate empty objects to track time and hold all time character counts
     week_start = dt.date(2014, 10, 15)
-    all_counts = pd.DataFrame(index = char_strings)
-    week_counts = pd.Series(0, index = char_strings, name = week_start)
     num_day_skip = 7
+    all_counts = pd.DataFrame(index = char_strings)
 
     # initiate empty object to hold unique character users
     char_user_sets = gen_char_user_sets(char_strings)
@@ -130,12 +122,15 @@ def unique_user_counts(ladder_id, rank_type) :
             game_users = game_info[7].split('-')
             game_user1 = int(game_users[0])
             game_user2 = int(game_users[1])
+
             # if the game did not take place during the 'current week', then tally results from previous week and keep on moving time forward until we're in the appropriate week for the game to start new counts
             while not week_start <= game_date < week_start + dt.timedelta(days=num_day_skip) :
                 week_counts = tally_unique_users(char_user_sets, week_start)
                 all_counts = pd.concat([all_counts, week_counts], axis=1)
                 week_start = week_start + dt.timedelta(days = num_day_skip)
                 char_user_sets = gen_char_user_sets(char_strings)
+
+            # if it did take place during the 'current week', add users to the character's set
             char_user_sets[char_dict[game_char1]].add(game_user1)
             char_user_sets[char_dict[game_char2]].add(game_user2)
 
@@ -145,12 +140,30 @@ def unique_user_counts(ladder_id, rank_type) :
 
     # save results to file
     all_counts = all_counts.transpose()
-    outfilename = 'unique_user_counts_' + ladder_id + '_' + rank_type + '.csv'
+    outfilename = 'parsed_char_counts/unique_user_counts_' + ladder_id + '_' + rank_type + '.csv'
     all_counts.to_csv(outfilename, index_label='Dates')
     return all_counts
 
+def gen_char_user_sets(character_list) :
+    X = {}
+    for x in character_list :
+        X[x] = set()
+    return X
+
+def tally_unique_users(char_user_sets, week_start) :
+    week_counts = pd.Series(0, index = char_strings, name = week_start)
+    for i in char_user_sets.keys() :
+        week_counts[i] = len(char_user_sets[i])
+    return week_counts
+
+# be careful! next lines generate new tables
 unique_all = unique_user_counts('all', 'ranked')
 unique_wiiu = unique_user_counts('wiiu', 'ranked')
+
+
+###
+# generate counts based on unique number of SIGNIFICANT users
+###
 
 def signif_user_counts(ladder_id, rank_type, alpha) :
     """
@@ -164,8 +177,82 @@ def signif_user_counts(ladder_id, rank_type, alpha) :
         print "Please enter valid values for ladder_id, rank_type and alpha."
         return None
 
+    # initiate empty objects to hold character counts per week and all time
+    week_start = dt.date(2014, 10, 15)
+    num_day_skip = 7
+    all_counts = pd.DataFrame(index = char_strings)
+
+    # initiate empty object to hold character use counts per user
+    users_dict = {}
+
+    # loop through each match record
+    with open(game_records_filename) as f :
+        header = f.readline() # skip first line
+        for line in f :
+            game_info = line.split(',')
+            pass_vec = gen_pass_vec(game_info, ladder_id, rank_type)
+            if any(pass_vec) : continue
+            game_date = dt.datetime.strptime(game_info[3].split()[0], '%Y-%m-%d').date()
+            game_chars = game_info[9].split('-')
+            game_char1 = int(game_chars[0])
+            game_char2 = int(game_chars[1])
+            game_users = game_info[7].split('-')
+            game_user1 = int(game_users[0])
+            game_user2 = int(game_users[1])
+
+            # if the game did not take place during the 'current week', then tally results from previous week and keep moving time forward until we're in the appropriate week for the game to start new counts
+            while not week_start <= game_date < week_start + dt.timedelta(days=num_day_skip) :
+                week_counts = tally_signif_users(users_dict, week_start, alpha)
+                all_counts = pd.concat([all_counts, week_counts], axis=1)
+                week_start = week_start + dt.timedelta(days = num_day_skip)
+                users_dict = {}
+
+            # if it did take place during the 'current week', increment that use count for the character for that user
+            users_dict = increment_users_dict(users_dict, game_user1, game_char1)
+            users_dict = increment_users_dict(users_dict, game_user2, game_char2)
+
+    # add last set of records to table
+    week_counts = tally_signif_users(users_dict, week_start, alpha)
+    all_counts = pd.concat([all_counts, week_counts], axis=1)
+
+    # save results to file
+    all_counts = all_counts.transpose()
+    outfilename = 'parsed_char_counts/signif' + str(int(alpha*100)) + '_user_counts_' + ladder_id + '_' + rank_type + '.csv'
+    all_counts.to_csv(outfilename, index_label='Dates')
+    return all_counts
+
+
+def tally_signif_users(users_dict, week_start, alpha) :
+    week_counts = pd.Series(0, index = char_strings, name=week_start)
+    for i in users_dict.values() :
+        # for each user, determine which characters were used beyond the signficance threshold 
+        signif_chars = i.index[i/sum(i) >= alpha]
+
+        for j in signif_chars :
+            # for each significant character, increment their weekly user count by one
+            week_counts[j] += 1
+    return week_counts
+
+def increment_users_dict(users_dict, game_user, game_char) :
+    if game_user not in users_dict.keys() :
+        users_dict[game_user] = pd.Series(0, index=char_strings)
+    users_dict[game_user][char_dict[game_char]] += 1
+    return users_dict
+
+
+# be careful! next lines generate new tables
+# signif10_all = signif_user_counts('all', 'ranked', 0.1)
+signif20_all = signif_user_counts('all', 'ranked', 0.2)
+signif30_all = signif_user_counts('all', 'ranked', 0.3)
+# signif10_wiiu = signif_user_counts('wiiu', 'ranked', 0.1)
+signif20_wiiu = signif_user_counts('wiiu', 'ranked', 0.2)
+signif30_wiiu = signif_user_counts('wiiu', 'ranked', 0.3)
+
 """
 notes and testing area
+
+    # dict keyed by user where each entry is a series where the index are characters
+    # can then iterate through dict, determining which characters to add count to with series.index[series>threshold]
 
 tim = some dict
 tom = pd.DataFrame(tim.items(), columns=['character', 'counts'])
