@@ -9,7 +9,7 @@ library(tidyverse)
 library(scales)
 
 # uncomment for troubleshooting
-# ladder_type<-'wiiu'; rank_type<-'ranked'; count_type<-'unique_user'; plot_type<-'fold_use'
+# ladder_type<-'wiiu'; rank_type<-'ranked'; count_type<-'signif20_user'; plot_type<-'fold_use'
 
 viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
 
@@ -55,7 +55,10 @@ viz_char_counts <- function(ladder_type, rank_type, count_type, plot_type) {
             cbar_lim <- 2.5; y_floor <- -5
             cbar_cols <- c('blue1', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red1')
 
-        } else if (count_type == 'signif_user') {
+        } else if (count_type == 'signif20_user') {
+            cbar_lim <- 2.5; y_floor <- -5
+            cbar_cols <- c('blue1', 'blue2', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red2', 'red1')
+        } else if (count_type == 'signif30_user') {
             cbar_lim <- 2.5; y_floor <- -5
             cbar_cols <- c('blue1', 'blue2', 'blue3', 'blue4', 'grey30', 'red4', 'red3', 'red2', 'red1')
         }
@@ -164,7 +167,7 @@ plot_fold_use<-function(X, fig_dir, cbar_lim, y_floor, cbar_cols) {
         if (any(adj_bool)) {
             if (adj_bool[1]) { # need to fix low extremes
                 if (fold_range[1]<y_floor) { # need to fix plot limits
-                    outplot <- outplot + coord_cartesian(ylim=c(y_floor, max(c(0, plot_df[,2]))))
+                    outplot <- outplot + coord_cartesian(ylim=c(y_floor, max(c(0, plot_df[,2]), na.rm=T)))
                 }
                 low_dat <- plot_df
                 low_dat[which(!(low_dat[,2]<(-cbar_lim))), 2] <- 0
@@ -192,16 +195,19 @@ viz_char_counts('all', 'ranked', 'unique_user', 'fold_use')
 viz_char_counts('wiiu', 'ranked', 'unique_user', 'raw')
 viz_char_counts('wiiu', 'ranked', 'unique_user', 'frac_use')
 viz_char_counts('wiiu', 'ranked', 'unique_user', 'fold_use')
+viz_char_counts('all', 'ranked', 'signif20_user', 'raw')
+viz_char_counts('all', 'ranked', 'signif20_user', 'frac_use')
+viz_char_counts('all', 'ranked', 'signif20_user', 'fold_use')
+viz_char_counts('wiiu', 'ranked', 'signif20_user', 'raw')
+viz_char_counts('wiiu', 'ranked', 'signif20_user', 'frac_use')
+viz_char_counts('wiiu', 'ranked', 'signif20_user', 'fold_use')
+viz_char_counts('all', 'ranked', 'signif30_user', 'raw')
+viz_char_counts('all', 'ranked', 'signif30_user', 'frac_use')
+viz_char_counts('all', 'ranked', 'signif30_user', 'fold_use')
+viz_char_counts('wiiu', 'ranked', 'signif30_user', 'raw')
+viz_char_counts('wiiu', 'ranked', 'signif30_user', 'frac_use')
+viz_char_counts('wiiu', 'ranked', 'signif30_user', 'fold_use')
 
-
-
-## based on unique users count
-
-ifelse(!dir.exists('all_ranked/frac_users/'), dir.create('all_ranked/frac_users/'), FALSE)
-
-## based on number of users with significant usage (greater than 20% of plays)
-
-ifelse(!dir.exists('all_ranked/signif_users/'), dir.create('all_ranked/signif_users/'), FALSE)
 
 
 ### testing area
