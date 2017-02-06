@@ -43,15 +43,21 @@ intangible, reflect are key words for attributes
 
 
 KEY:
-TYPE 1: START UP
-TYPE 2: MAIN
-TYPE 3: RECOVERY
-TYPE 4: EARLY/LATE
+TYPE 1: STARTUP or RECOVERY [yellow] (no melee hitbox (only projectile))
+TYPE 2: MAIN [red]
+TYPE 3: EARLY/LATE [off red]
+TYPE 4: ITEM SPAWN
 
 
 ATTRIBS:
 TYPE 1: ARMOR 
 TYPE 2: AUTOCANCEL
+TYPE 3: PROJECTILE 
+TYPE 4: REFLECT
+TYPE 5: WINDBOX
+
+start up means frames before 1) a hitbox, 2) an item spawn, 3) first active projectile frame 
+recovery means 1) after active hitbox, 2) after item spawn, 3) after first active projectile, 4) until FAF for moves without hitboxes
 
 
 

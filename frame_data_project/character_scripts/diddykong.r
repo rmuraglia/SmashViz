@@ -1,4 +1,4 @@
-# mario.r
+# diddykong.r
 
 library(jsonlite)
 library(ggplot2)
@@ -9,15 +9,23 @@ library(gridExtra)
 
 source('../fdp_common.r')
 
-moves_df <- import_from_kh('http://api.kuroganehammer.com/api/Characters/name/Mario/detailedmoves')
-moves_df <- filter(moves_df, !grepl('throw', moveName))
+moves_df <- import_from_kh('http://api.kuroganehammer.com/api/Characters/name/Diddykong/detailedmoves')
 
-skip_moves <- c('Landing', 'Cape', 'Fireball', 'F.L.U.D.D')
+# filter out uninteresting or problematic moves
+moves_df <-  filter(moves_df, !grepl('Explosion|Failed|throw|^Rapid Jab$|Throw)$', moveName))
+
+skip_moves <- c('Peanut Popgun', 'Monkey Flip', 'Rocketbarrel Boost', 'Banana Peel')
 skip_string <- paste(skip_moves, collapse='|')
 
 # get general 'all move' information 
-frame_max <- max(as.numeric(moves_df$FAF), na.rm=TRUE) + 1
+# frame_max <- max(as.numeric(moves_df$FAF), na.rm=TRUE) + 1
+frame_max <- 60
 unique_moves <- sapply(moves_df$moveName, stem_move_names) %>% unique(.)
+
+# split monkey flip into grab and attack variants
+unique_moves[21] <- 'Monkey Flip (Grab)'
+unique_moves <- append(unique_moves, 'Monkey Flip (Attack Input)', 21) 
+
 num_unique_moves <- length(unique_moves)
 
 # initialize information stores
@@ -38,41 +46,32 @@ all_frames <- get_inactive_frames(all_frames, skip_string)
 # populate autocancel frames
 all_attribs <- get_ac_frames(moves_df, skip_string, all_attribs)
 
-# get armor frames
-get_armor_frames <- function(x) {
-    armor_vec <- strsplit(x, split='[[:punct:]]') %>% unlist(.) %>% as.numeric(.)
-    a_frames <- armor_vec[which(!is.na(armor_vec))]
-    return(a_frames)
-}
+# process Peanut Popgun
+all_frames['Peanut Popgun', 18] <- 4
+all_frames['Peanut Popgun', 1:17] <- 1
+all_frames['Peanut Popgun', 19:48] <- 1
 
-for (i in 1:nrow(moves_df)) {
-    if (grepl('Intangible', moves_df[i,]$notes)) {
-        stem_name <- stem_move_names(moves_df[i,]$moveName)
-        armor_range <- get_armor_frames(moves_df[i,]$notes)
-        armor_frames <- c(armor_range[1] : armor_range[2])
-        all_attribs[stem_name, armor_frames] <- 1
+# process Monkey Flip (grab)
+all_frames['Monkey Flip (Grab)', 20:42] <- 2
+all_frames['Monkey Flip (Grab)', 1:19] <- 1
+all_frames['Monkey Flip (Grab)', 42:43] <- 1
 
-    }
-}
+# process Monkey Flip (kick)
+all_frames['Monkey Flip (Attack Input)', 1:5] <- 1
+all_frames['Monkey Flip (Attack Input)', 6:10] <- 2
+all_frames['Monkey Flip (Attack Input)', 11:25] <- 3
+all_frames['Monkey Flip (Attack Input)', 26:29] <- 1
 
-# process fireball
-# hitbox: 17-44, 45-69 (late)
-# FAF: 53
-all_frames['Fireball', 1:52] <- 1
-all_attribs['Fireball', 17:69] <- 3
+# process Rockets
+all_frames['Rocketbarrel Boost', 1:7] <- 1
+all_frames['Rocketbarrel Boost', 8:16] <- 2
+all_frames['Rocketbarrel Boost', 17:33] <- 3
 
-# process cape
-# hitbox: 12-14
-# reflect: 6-20
-# FAF: 36
-all_frames['Cape', 1:11] <- 1
-all_frames['Cape', 12:14] <- 2
-all_frames['Cape', 15:35] <- 1
-all_attribs['Cape', 6:20] <- 4
+# process Banana
+all_frames['Banana Peel', 1:19] <- 1
+all_frames['Banana Peel', 20]<-4
+all_frames['Banana Peel', 21:39]<-1
 
-# process fludd (spray)
-# first active: 21
-# FAF: 75
 
 
 ##############
@@ -83,6 +82,7 @@ all_attribs['Cape', 6:20] <- 4
 plot_frames <- all_frames %>% mutate(MoveNames=rownames(.)) %>% gather(key=Frame, value=Type, -MoveNames) %>% mutate(Frame=as.integer(Frame)) %>% mutate(Type=as.factor(Type)) %>% mutate(MoveNames=factor(MoveNames, levels=rev(unique_moves)))
 plot_attribs <- all_attribs %>% mutate(MoveNames=rownames(.)) %>% gather(key=Frame, value=Type, -MoveNames) %>% mutate(Frame=as.integer(Frame)) %>% mutate(Type=as.factor(Type)) %>% mutate(MoveNames=factor(MoveNames, levels=rev(unique_moves)))
 
+
 # load in icons for attributes
 img_list <- c('../icons/shield2.png', '../icons/spark.png', '../icons/arrow-cropped.png', '../icons/hexagon_effect_abstract_sign-512.png')
 
@@ -91,7 +91,7 @@ img_offset<-0.4
 raster_list<-vector('list', nrow(plot_attribs))
 for (i in 1:nrow(plot_attribs)) {
     if (!is.na(plot_attribs[i,3])) {
-        img <- readPNG(img_list[plot_attribs[i,3]])
+        img <- readPNG(img_list[as.numeric(as.character(plot_attribs[i,3]))])
         raster_list[[i]] <- rasterGrob(img, interpolate=TRUE)
     }
 }
@@ -104,7 +104,7 @@ make_annotation<-function(raster, x, y) {
 
 # to identify line positions to separate classes of attacks, inspect manually (add 0.5 to end of class)
 # cbind(rev(unique_moves), 1:num_unique_moves)
-line_positions <- c(4.5, 9.5, 12.5, 15.5, 18.5)
+line_positions <- c(5.5, 10.5, 13.5, 16.5, 19.5)
 
 # main panel plot
 p1 <- ggplot(plot_frames, aes(x=Frame, y=MoveNames)) + 
@@ -112,8 +112,8 @@ p1 <- ggplot(plot_frames, aes(x=Frame, y=MoveNames)) +
     scale_x_continuous(position='bottom', breaks=seq(0,frame_max, 5), expand=c(0.01,0), 
         sec.axis=sec_axis(name='', trans=~., breaks=seq(0, frame_max, 5))) + 
     mapply(make_annotation, raster_list, plot_attribs[,2], as.numeric(plot_attribs[,1])) +  
-    scale_fill_manual(values=c('gold', 'red', 'red4'), na.value='grey80', labels=c('None', 'Main', 'Secondary'), name='Direct\nhitboxes') + 
-    labs(title='Mario\'s Smash 4 frame data by @Quappo_ for Floor\'s frame data viz project') + 
+    scale_fill_manual(values=c('gold', 'red', 'red4', 'purple'), na.value='grey80', labels=c('None', 'Main', 'Secondary', 'Item\nspawn'), name='Direct\nhitboxes') + 
+    labs(title='Diddy Kong\'s Smash 4 frame data by @Quappo_ for Floor\'s frame data viz project') + 
     theme(axis.title.y=element_blank()) +
     geom_hline(yintercept=line_positions)
 
@@ -140,4 +140,4 @@ legends <- arrangeGrob(color_legend, icon_legend, nrow=2)
 p_out <- arrangeGrob(p1 + theme(legend.position='none'), legends, nrow=1, widths=c(9,1))
 # grid.draw(p_out) # preview
 
-ggsave(file='../figures/Mario_fdp.png', width=12, height=4, dpi=200, plot=p_out)
+ggsave(file='../figures/DiddyKong_fdp.png', width=12, height=4, dpi=200, plot=p_out)
