@@ -98,7 +98,7 @@ get_ac_frames <- function(kh_data, blacklist, attrib_df) {
         # check if ac2 has any info
         if (grepl('>', move_detail$ac2)) {
             ac_frame <- late_autocancel(move_detail$ac2)
-            attrib_df[stemmed_name, ac_frame] <- 2
+            attrib_df[stemmed_name, ac_frame:frame_max] <- 2
         }
     }
     return(attrib_df)
