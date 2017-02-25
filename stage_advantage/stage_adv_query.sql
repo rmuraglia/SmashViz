@@ -34,7 +34,7 @@ select p1.*, p2_id, p2_rating, p2_sigma, p2_charid, p2_bans
             and sets.ladder_id = 4
             and sets.season_id != 67
             and sets.type = 2
-            and date(sets.created_at) > @GAMES_CUTOFF
+            and date(sets.created_at) >= @GAMES_CUTOFF
             and mp.team_number = 1
         ) as p1_left
     left join (
@@ -52,7 +52,7 @@ select p1.*, p2_id, p2_rating, p2_sigma, p2_charid, p2_bans
             and sets.ladder_id = 4
             and sets.season_id != 67
             and sets.type = 2
-            and date(sets.created_at) > @GAMES_CUTOFF
+            and date(sets.created_at) >= @GAMES_CUTOFF
             and mp.team_number = 1
             group by game_id
         ) as p1_right
@@ -81,7 +81,7 @@ join (
             and sets.ladder_id = 4
             and sets.season_id != 67
             and sets.type = 2
-            and date(sets.created_at) > @GAMES_CUTOFF
+            and date(sets.created_at) >= @GAMES_CUTOFF
             and mp.team_number = 2
         ) as p2_left
     left join (
@@ -99,7 +99,7 @@ join (
             and sets.ladder_id = 4
             and sets.season_id != 67
             and sets.type = 2
-            and date(sets.created_at) > @GAMES_CUTOFF
+            and date(sets.created_at) >= @GAMES_CUTOFF
             and mp.team_number = 2
             group by game_id
         ) as p2_right
