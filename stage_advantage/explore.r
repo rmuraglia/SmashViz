@@ -5,6 +5,7 @@ library(ggplot2)
 library(grid)
 library(gridExtra)
 library(scales)
+library(ggthemes)
 
 ###########
 # load and clean data
@@ -54,6 +55,7 @@ dat_final <- dat_clean %>% separate(p1_bans, into=paste('p1_ban', c(1:p1_ban_max
 # check joint distribution of player ratings to see if most matches are between closely matched players -- when imbalanced, does it lean in the direction we expect?
 rating_labels <- c('1' = 'P1 Win', '2' = 'P2 Win')
 p01 <- ggplot(dat_clean, aes(x=p1_rating, y=p2_rating)) + geom_hex(binwidth=25) + facet_grid(.~game_winner, labeller = labeller(game_winner = rating_labels)) + geom_abline(slope=1, intercept=1) +  scale_fill_gradient(limits=c(250, 1600)) + ggtitle('Joint distribution of match participant ladder ratings')
+ggsave(file='figures/ratings-joint-hex.png', width=12, height=6, dpi=150, plot=p01)
 
 # check distribution of character use rates and rating
 p1_info <- dat_clean %>% select(rating = p1_rating, charid = p1_charid)
@@ -61,9 +63,11 @@ p2_info <- dat_clean %>% select(rating = p2_rating, charid = p2_charid)
 all_player_info <- union_all(p1_info, p2_info)
 
 p02 <- ggplot(all_player_info, aes(x=rating)) + geom_histogram(binwidth=20, fill='lightsteelblue1', colour='dodgerblue3') + ggtitle('Distribution of player ladder ratings')
+ggsave(file='figures/ratings-hist.png', width=6, height=4, dpi=150, plot=p02)
 
 # to reorder bars: http://stackoverflow.com/a/27448463
-p03 <- ggplot(all_player_info, aes(x=fct_infreq(charid))) + geom_bar() + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5), axis.title.x=element_blank()) + labs(title='Match participation (game counts) in ranked Wii U matches on Anther\'s Ladder from 05/20/2016 - 12/21/2016') 
+p03 <- ggplot(all_player_info, aes(x=fct_infreq(charid))) + geom_bar(fill='coral', colour='coral4') + theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5), axis.title.x=element_blank()) + labs(title='Match participation (game counts) in ranked Wii U matches on Anther\'s Ladder from 05/20/2016 - 12/21/2016') 
+ggsave(file='figures/character-matchcounts.png', width=12, height=6, dpi=150, plot=p03)
 
 # check distribution of player rating differences
 rating_diff <- dat_clean %>% transmute(rating_gap = p1_rating - p2_rating, abs_rating_gap = abs(rating_gap))
@@ -71,6 +75,7 @@ rating_diff <- dat_clean %>% transmute(rating_gap = p1_rating - p2_rating, abs_r
 p04 <- ggplot(rating_diff, aes(x=rating_gap)) + geom_density(fill='lightsteelblue1', colour='dodgerblue3')
 p05 <- ggplot(rating_diff, aes(x=abs_rating_gap)) + geom_density(fill='lightsteelblue1', colour='dodgerblue3')
 p06 <- arrangeGrob(p04, p05, nrow=2)
+grid.draw(p06)
 
 
 # stage use counts
@@ -79,10 +84,12 @@ stage_order <- c('Battlefield', 'Final Destination', 'Smashville', 'Town and Cit
 stage_abbrv <- c('BF', 'FD', 'SV', 'TC', 'LC', 'DL', 'DH')
 
 # overall counts
-ggplot(stage_stats, aes(x=stage_pick, y=count)) + geom_bar(stat='identity') + scale_x_discrete(limits=stage_order, labels=stage_abbrv) + scale_y_continuous(breaks=pretty_breaks(5))
+p07 <- ggplot(stage_stats, aes(x=stage_pick, y=count)) + geom_bar(stat='identity') + scale_x_discrete(limits=stage_order) + scale_y_continuous(breaks=pretty_breaks(5)) + theme(axis.text.x=element_text(angle=45, hjust=1, vjust=1))
+ggsave(file='figures/stage-counts.png', width=5, height=6, dpi=150, plot=p07)
 
 # use frequency per game
-ggplot(stage_stats, aes(x=stage_pick, y=frequency)) + geom_bar(stat='identity') + scale_x_discrete(limits=stage_order, labels=stage_abbrv) + facet_grid(game_number~., labeller = labeller(game_number = setNames(paste('Game ', c(1:5), sep=''), c(1:5))))
+p08 <- ggplot(stage_stats, aes(x=stage_pick, y=frequency)) + geom_bar(stat='identity') + scale_x_discrete(limits=stage_order, labels=stage_abbrv) + facet_grid(game_number~., labeller = labeller(game_number = setNames(paste('Game ', c(1:5), sep=''), c(1:5))))
+ggsave(file='figures/stage-freqs-bygame.png', width=4, height=10, dpi=150, plot=p08)
 
 
 
