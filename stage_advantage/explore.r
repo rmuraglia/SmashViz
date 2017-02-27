@@ -92,6 +92,85 @@ p08 <- ggplot(stage_stats, aes(x=stage_pick, y=frequency)) + geom_bar(stat='iden
 ggsave(file='figures/stage-freqs-bygame.png', width=4, height=10, dpi=150, plot=p08)
 
 
+######
+# case studies
+######
 
+pick_char_games <- function(dat, name) {
+    # pick out games belonging to a character (remove dittos)
+    p1_games <- filter(dat, p1_charid == name) %>% mutate(char_win = ifelse(game_winner == 1, 1, 0))
+    p2_games <- filter(dat, p2_charid == name) %>% mutate(char_win = ifelse(game_winner == 2, 1, 0))
+    char_games <- union_all(p1_games, p2_games) %>% filter(p1_charid != p2_charid)
+    return(char_games)
+}
+
+base_win_rate <- function(dat) {
+    # get baseline win rate for that character, not factoring in stage or mu
+    dat %>% group_by(char_win) %>% summarize(count = n()) %>% mutate(bwr = count/sum(count)) %>% select(-count)
+}
+
+stage_win_rate <- function(dat) {
+    # get winrate per stage
+    dat %>% group_by(char_win, stage_pick) %>% summarize(count = n()) %>% group_by(stage_pick) %>% mutate(swr = count/sum(count))
+}
+
+stage_differential <- function(bwr, swr, name) {
+    swr_wins <- filter(swr, char_win == 1)
+    inner_join(bwr, swr, by = 'char_win') %>% filter(char_win == 1) %>% mutate(win_diff = swr - bwr) %>% mutate(character = name) %>% select(character, base_win_rate = bwr, stage_pick, num_wins = count, stage_win_rate = swr, win_diff) %>% arrange(desc(win_diff))
+}
+
+case_study <- function(dat, name) {
+    case_dat <- pick_char_games(dat, name)
+    case_bwr <- base_win_rate(case_dat)
+    case_swr <- stage_win_rate(case_dat)
+    case_out <- stage_differential(case_bwr, case_swr, name)
+    return(case_out)
+}
+
+bronze_max <- 1245
+
+# choose gap cutoff:
+# quantile(rating_diff$abs_rating_gap, probs = seq(0, 1, length.out=21))
+gap_cutoff <- 100
+
+### zss: expect + on bf/dl, - on lc
+
+zss1 <- case_study(dat_clean, 'Zero Suit Samus')
+
+# filter to only matches between players within 100 pts (roughly within one rating class eg bronze, silver)
+zss2 <- filter(dat_clean, abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Zero Suit Samus')
+
+# remove bronze players
+zss3 <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% case_study('Zero Suit Samus')
+
+# remove bronze and filter to players within 100 pts
+zss4 <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Zero Suit Samus')
+
+### little mac: expect + on fd - on dh
+lm1 <- case_study(dat_clean, 'Little Mac')
+lm2 <- filter(dat_clean, abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Little Mac')
+lm3 <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% case_study('Little Mac')
+lm4 <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Little Mac')
+
+### game and watch -- how low will game counts go?
+gnw1 <- case_study(dat_clean, 'Mr. Game And Watch')
+gnw2 <- filter(dat_clean, abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Mr. Game And Watch')
+gnw3 <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% case_study('Mr. Game And Watch')
+gnw4 <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Mr. Game And Watch')
+
+
+# compare some top tiers
+diddy <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Diddy Kong')
+cloud <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Cloud')
+sheik <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Sheik')
+mario <-  filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Mario')
+sonic <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Sonic')
+zss <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Zero Suit Samus')
+bayo <- filter(dat_clean, p1_rating > bronze_max & p2_rating > bronze_max) %>% filter(abs(p1_rating - p2_rating) < gap_cutoff) %>% case_study('Bayonetta')
+
+top_tiers <- rbind(diddy, cloud, sheik, mario, sonic, zss, bayo) %>% arrange(desc(win_diff)) 
+
+select(top_tiers, character, stage_pick, win_diff) %>% 
+filter(abs(win_diff)>0.005) %>% as.data.frame()
 
 
