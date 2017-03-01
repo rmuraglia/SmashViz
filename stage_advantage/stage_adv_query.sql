@@ -1,5 +1,9 @@
 -- stage_adv_query.sql
 
+-- usage: mysql < ../stage_adv_query.sql > games_record.tsv
+
+use anthers_12_21_2016;
+
 -- set a date cutoff for games to be considered in analysis. choose to focus on games after patch 1.1.6
 set @GAMES_CUTOFF = '2016-05-20';
 
@@ -9,7 +13,8 @@ select p1.*, p2_id, p2_rating, p2_sigma, p2_charid, p2_bans
         from (
         select sets.id as set_id, 
             games.id as game_id, 
-            sets.created_at,
+            date(sets.created_at) as set_date,
+            sets.season_id,
             sets.match_count,
             games.game_number,
             games.stage_pick,
@@ -62,6 +67,7 @@ join (
     select p2_left.*, p2_right.p2_bans
         from (
         select games.id as game_id,
+            sets.created_at,
             mp.player_id as p2_id,
             pls.rating as p2_rating,
             pls.rating_standard_deviation as p2_sigma,
@@ -106,4 +112,5 @@ join (
     on p2_left.game_id = p2_right.game_id
     ) as p2
 on p1.game_id = p2.game_id
+order by created_at, set_id, game_number
 ;

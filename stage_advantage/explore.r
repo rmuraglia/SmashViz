@@ -11,7 +11,7 @@ library(ggthemes)
 # load and clean data
 ###########
 
-dat_raw <- read_delim('data/anthers_12_21_2016_wiiuranked_patch1.1.6.tsv', delim='\t', na=c('NULL'))
+dat_raw <- read_delim('data/anthers_12_21_2016_wiiuranked_patch1.1.6_matches.tsv', delim='\t', na=c('NULL'))
 
 # generate these maps like:
 # mysql -e 'select id, name from anthers_12_21_2016.characters where game_id = 4;' > characters.tsv
@@ -36,6 +36,7 @@ dat_clean <- mutate(dat_trim, game_winner = coalesce(game_winner, set_winner))
 
 # map character and stage ids to names
 dat_clean <- dat_clean %>% mutate(p1_charid = factor(p1_charid, levels=character_map$id, labels=character_map$name), p2_charid = factor(p2_charid, levels=character_map$id, labels=character_map$name), stage_pick = factor(stage_pick, levels=stage_map$id, labels=stage_map$name))
+# maybe also as.Date(created_at) for easy comparisons to league breaks by season
 
 # get max number of bans
 p1_ban_counts <- sapply(dat_clean$p1_bans, function(x) { length(unlist(strsplit(x, split='-'))) })
@@ -173,4 +174,4 @@ top_tiers <- rbind(diddy, cloud, sheik, mario, sonic, zss, bayo) %>% arrange(des
 select(top_tiers, character, stage_pick, win_diff) %>% 
 filter(abs(win_diff)>0.005) %>% as.data.frame()
 
-
+# plat 1455+
