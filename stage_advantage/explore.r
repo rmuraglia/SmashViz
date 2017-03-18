@@ -175,3 +175,120 @@ select(top_tiers, character, stage_pick, win_diff) %>%
 filter(abs(win_diff)>0.005) %>% as.data.frame()
 
 # plat 1455+
+
+
+
+
+## which mus are explored
+
+baseline_mu_ratio <- function(dat, char1, char2, min_players, min_matches, min_rating, max_spread) {
+    # get MU win ratio from data between <char1> and <char2>
+    # require games to occur with players with a rating of at least <min_rating>
+    # require players to be within <max_spread> rating points of each other
+    # require <min_players> unique players of each character
+
+    rating_filtered <- filter(dat, p1_rating > min_rating & p2_rating > min_rating) %>% filter(abs(p1_rating - p2_rating) < max_spread)
+    games_A <- filter(rating_filtered, p1_charid == char1 & p2_charid == char2)
+    games_B <- filter(rating_filtered, p1_charid == char2 & p2_charid == char1)
+    players_1 <- union(select(games_A, pid = p1_id), select(games_B, pid = p2_id))
+    players_2 <- union(select(games_A, pid = p2_id), select(games_B, pid = p1_id))
+    games_all <- union_all(games_A, games_B)
+
+    # throw error if unable to obtain a baseline win rate
+    if (nrow(games_all) < min_matches) {
+        # print('Not enough games to get a baseline')
+        return(NA)
+    }
+    if (nrow(players_1) < min_players) {
+        # print(paste('Not enough unique players for ', char1, ' to get a baseline', sep=''))
+        return(NA)
+    }
+    if (nrow(players_2) < min_players) {
+        # print(paste('Not enough unique players for ', char2, ' to get a baseline', sep=''))
+        return(NA)
+    }
+
+    # compute baseline win rate from char1 perspective
+    char1_wins <- bind_rows(transmute(games_A, c1_win = ifelse(game_winner == 1, 1, 0)), transmute(games_B, c1_win = ifelse(game_winner == 2, 1, 0)))
+    char1_wr <- sum(char1_wins)/nrow(char1_wins)
+    return(char1_wr)
+}
+
+min_rating <- 1350
+max_spread <- 100
+min_matches <- 50
+min_players <- 5
+
+baseline_wrs <- data_frame(p1 = character_map$name, p2 = character_map$name) %>% expand(p1, p2) %>% rowwise() %>% mutate(p1_wr = baseline_mu_ratio(dat_final, p1, p2, min_players, min_matches, min_rating, max_spread)) 
+
+baseline2 <- baseline_wrs %>% mutate(p1 = factor(p1), p2 = factor(p2)) 
+
+ggplot(baseline2, aes(x=p1, y=p2)) + geom_tile(aes(fill=!is.na(p1_wr)), colour='grey50') + scale_fill_manual(values=c('white', 'dodgerblue')) + theme(axis.text.x=element_text(size=8, angle=45, hjust=1, vjust=1), axis.text.y=element_text(size=8))
+
+
+rm_list <- c('Dr. Mario', 'Duck Hunt Duo', 'Jigglypuff', 'Mii Brawler', 'Mii Gunner', 'Mii Swordsman', 'Olimar', 'Palutena', 'Random', 'Charizard', 'Wii Fit Trainer', 'Wario', 'Peach', 'Dark Pit', 'Pit', 'Mr. Game And Watch', 'Falco', 'Zelda', 'Metaknight', 'Kirby', 'Robin', 'Roy', 'Lucario', 'Bowser Jr.', 'Greninja', 'Lucina')
+baseline3 <- baseline_wrs %>% filter(!(p1 %in% rm_list | p2 %in% rm_list)) %>% mutate(p1 = factor(p1), p2 = factor(p2)) 
+ggplot(baseline3, aes(x=p1, y=p2)) + geom_tile(aes(fill=!is.na(p1_wr)), colour='grey50') + scale_fill_manual(values=c('white', 'dodgerblue')) + theme(axis.text.x=element_text(size=8, angle=45, hjust=1, vjust=1), axis.text.y=element_text(size=8))
+
+
+choose_list <- c('Bayonetta', 'Diddy Kong', 'Cloud', 'Sheik', 'Mario', 'Sonic', 'Fox', 'Rosalina And Luma', 'Mewtwo', 'Marth', 'Zero Suit Samus', 'Ryu', 'Corrin', 'Pikachu', 'Megaman', 'Villager', 'Toon Link', 'Captain Falcon')
+baseline4 <- baseline_wrs %>% filter(p1 %in% choose_list & p2 %in% choose_list) %>% mutate(p1 = factor(p1), p2 = factor(p2)) 
+ggplot(baseline4, aes(x=p1, y=p2)) + geom_tile(aes(fill=!is.na(p1_wr)), colour='grey50') + scale_fill_manual(values=c('white', 'dodgerblue')) + theme(axis.text.x=element_text(size=8, angle=45, hjust=1, vjust=1), axis.text.y=element_text(size=8))
+
+
+dat_filtered <- dat_final %>% filter(p1_rating > min_rating & p2_rating > min_rating) %>% filter(abs(p1_rating - p2_rating) < max_spread) %>% filter(p1_charid %in% choose_list & p2_charid %in% choose_list) %>% select(stage_pick, p1_charid, p2_charid) %>% group_by(p1_charid, p2_charid, stage_pick) %>% summarize(count=n()) %>% ungroup()
+
+mu_stage_count <- function(dat, c1, c2, stage) {
+    d1 <- filter(dat, p1_charid==c1 & p2_charid==c2 & stage_pick==stage)
+    d2 <- filter(dat, p1_charid==c2 & p2_charid==c1 & stage_pick==stage)
+    print(paste(c1, c2, stage, d1$count + d2$count, sep=', '))
+}
+
+for (i in 1:length(choose_list)) {
+    for (j in i:length(choose_list)) {
+        mu_stage_count(dat_filtered, choose_list[i], choose_list[j], 'Battlefield')
+        mu_stage_count(dat_filtered, choose_list[i], choose_list[j], 'Final Destination')
+        mu_stage_count(dat_filtered, choose_list[i], choose_list[j], 'Duck Hunt')
+        mu_stage_count(dat_filtered, choose_list[i], choose_list[j], 'Town and City')
+        mu_stage_count(dat_filtered, choose_list[i], choose_list[j], 'Smashville')
+        mu_stage_count(dat_filtered, choose_list[i], choose_list[j], 'Dreamland')
+    }
+}
+
+################
+
+mu_stage_count <- function(dat, c1, c2, stage) {
+    d1 <- filter(dat, p1_charid==c1 & p2_charid==c2 & stage_pick==stage)
+    d2 <- filter(dat, p1_charid==c2 & p2_charid==c1 & stage_pick==stage)
+    if (nrow(d1) == 0 & nrow(d2) == 0) { 
+        out_count <- 0
+    } else if (nrow(d1) == 0 ) {
+        out_count <- d2$count
+    } else if (nrow(d2) == 0 ) {
+        out_count <- d1$count
+    } else { 
+        out_count <- d1$count + d2$count 
+    }
+    # print(paste(c1, c2, stage, d1$count + d2$count, sep=', '))
+    return(c(c1, c2, stage, out_count))
+}
+
+mu_stage_counts <- array(NA, dim=c(length(choose_list) * (length(choose_list)) * 7, 4))
+
+stage_list <- c('Battlefield', 'Final Destination', 'Duck Hunt', 'Town and City', 'Smashville', 'Dreamland')
+
+l <- 1
+for (i in 1:length(choose_list)) {
+    for (j in i:length(choose_list)) {
+        for (k in stage_list) {
+            mu_stage_counts[l,] <- mu_stage_count(dat_filtered, choose_list[i], choose_list[j], k)
+            l <- l + 1
+        }
+    }
+}
+
+mu_stage_counts <- data_frame(p1=mu_stage_counts[,1], p2=mu_stage_counts[,2], stage=mu_stage_counts[,3], count=mu_stage_counts[,4]) 
+mu_stage_counts <- mu_stage_counts %>% mutate(count = as.numeric(count))
+table(mu_stage_counts$count)->jon
+jon*as.numeric(names(jon))->bill
+sum(bill[1:20])
