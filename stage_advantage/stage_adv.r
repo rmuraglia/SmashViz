@@ -347,13 +347,10 @@ for (i in choose_list) {
     theme(legend.position='right') +
     theme(axis.text.y=element_blank(), axis.title.y=element_blank(), axis.title.x=element_blank()) 
 
-    p5_legend_g <- ggplotGrob(p5_main)$grobs
-    p5_legend <- p5_legend_g[[which(sapply(p5_legend_g, function(x) x$name) == "guide-box")]]
-
-    p5_all <- arrangeGrob(p5_y_strip, p5_main + theme(legend.position='none') + ggtitle(paste(i, ' stage advantage matrix', sep='')), p5_legend, nrow=1, widths=c(1, 12, 1.8))
+    p5_all <- arrangeGrob(p5_y_strip, p5_main + ggtitle(paste(i, ' stage advantage matrix', sep='')), nrow=1, widths=c(1, 12))
     ggsave(file=paste('figures/05_', i, '_stage_adv.png', sep=''), plot=p5_all, dpi=100, width=9, height=10)
 
-    p5_alt <- arrangeGrob(p5_y_strip, p5_main + theme(legend.position='none') + ggtitle(paste(i, ' stage advantage matrix (with game counts)', sep='')) + geom_text(aes(label=game_count)), p5_legend, nrow=1, widths=c(1, 12, 1.8))
+    p5_alt <- arrangeGrob(p5_y_strip, p5_main + ggtitle(paste(i, ' stage advantage matrix (with game counts)', sep='')) + geom_text(aes(label=game_count)), nrow=1, widths=c(1, 12))
     ggsave(file=paste('figures/05_', i, '_stage_adv_alt.png', sep=''), plot=p5_alt, dpi=100, width=9, height=10)
 }
 
@@ -378,4 +375,27 @@ ggsave(file='figures/06_aggregate_stage_adv.png', plot=p6_all, dpi=100, width=9,
 
 p6_alt <- arrangeGrob(p6_y_strip, p6_main + ggtitle('Aggregate stage advantages (with game counts)') + geom_text(aes(label=games_played)), nrow=1, widths=c(1,15)) 
 ggsave(file='figures/06_aggregate_stage_adv_alt.png', plot=p6_alt, dpi=100, width=9, height=10)
+
+#######
+# raw stage advantages
+#######
+
+plot7_df_L <- expand.grid(use_char = choose_list, stage = stage_list) %>% as_data_frame
+plot7_df_R <- stage_win_dat %>% group_by(use_char, stage) %>% summarize(win_count = sum(win_count), game_count = sum(game_count), stage_wr = win_count/game_count) %>% group_by(use_char) %>% mutate(baseline = mean(stage_wr)) %>% rowwise() %>% mutate(stage_diff = stage_wr - baseline)
+plot7_df <- left_join(plot7_df_L, plot7_df_R, by=c('use_char', 'stage')) %>% mutate(use_char = factor(use_char, levels=rev(sort(choose_list))), stage = factor(stage, levels=stage_list))
+
+p7_lim <- max(abs(plot7_df$stage_diff), na.rm=TRUE)
+p7_y_strip <- y_strip + theme(axis.title.y=element_blank()) + coord_cartesian(ylim=c(1, 18.9))
+p7_main <- ggplot(plot7_df, aes(x=stage, y=use_char)) +
+    geom_tile(aes(fill=stage_diff), colour='grey50') +
+    scale_fill_gradientn(name = 'Stage win\nenrichment', colours=c('blue4', 'blue3', 'blue2', 'blue1', 'grey90', 'red1', 'red2', 'red3', 'red4'), limits=c(-p7_lim, p7_lim)) +
+    scale_x_discrete(position='top') +
+    theme(legend.position='right') +
+    theme(axis.text.y=element_blank(), axis.title.y=element_blank(), axis.title.x=element_blank())
+p7_all <- arrangeGrob(p7_y_strip, p7_main + ggtitle('Unadjusted stage advantages'), nrow=1, widths=c(1,15))
+ggsave(file='figures/07_aggregate_stage_adv_unadjusted.png', plot=p7_all, dpi=100, width=9, height=10)
+
+p7_alt <- arrangeGrob(p7_y_strip, p7_main + ggtitle('Unadjusted stage advantages') + geom_text(aes(label=game_count)), nrow=1, widths=c(1,15))
+ggsave(file='figures/07_aggregate_stage_adv_unadjusted_alt.png', plot=p7_alt, dpi=100, width=9, height=10)
+
 
