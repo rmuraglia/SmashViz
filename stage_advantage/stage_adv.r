@@ -295,6 +295,25 @@ ggsave(file='figures/02_raw_mu_matrix.png', plot=p2_all, dpi=100, width=12, heig
 p2_alt <- arrangeGrob(blank_plot, x_strip + ggtitle('Raw matchup win matrix (game count listed in box)'), blank_plot, y_strip, p2_main + theme(legend.position='none') + theme(plot.margin=unit(c(0, 6, 6, 0), 'pt')) + geom_text(aes(label=game_count)), p2_legend, nrow=2, heights=c(1.5, 12), widths=c(1, 12, 1.5))
 ggsave(file='figures/02_raw_mu_matrix_alt.png', plot=p2_alt, dpi=100, width=12, height=10)
 
+p2_3 <- arrangeGrob(blank_plot, x_strip + ggtitle('Raw matchup win matrix'), blank_plot, y_strip, p2_main + theme(legend.position='none') + theme(plot.margin=unit(c(0, 6, 6, 0), 'pt')) + geom_text(aes(label=round(win_rate, 3))), p2_legend, nrow=2, heights=c(1.5, 12), widths=c(1, 12, 1.5))
+ggsave(file='figures2/02_raw_mu_matrix_v3.png', plot=p2_3, dpi=100, width=12, height=10)
+
+p2_4_main <- ggplot(raw_mu_chart, aes(x=opp_char, y=use_char)) + 
+    # geom_tile(aes(fill=win_rate), colour='grey50') + 
+    geom_point(aes(colour=win_rate, size=log(game_count))) +
+    scale_colour_gradientn(name = 'P1 win rate', colours=c('blue4', 'blue3', 'blue2', 'blue1', 'grey90', 'red1', 'red2', 'red3', 'red4')) +
+    scale_x_discrete(position='top') + 
+    theme(legend.position='right') +
+    theme(axis.text.x=element_blank(), axis.text.y=element_blank(), axis.title.x=element_blank(), axis.title.y=element_blank()) +
+    geom_abline(slope=-1, intercept=length(y_chars)+1) + 
+    geom_text(aes(label=round(win_rate, 3)))
+
+p2_4_legend_g <- ggplotGrob(p2_4_main)$grobs
+p2_4_legend <- p2_4_legend_g[[which(sapply(p2_4_legend_g, function(x) x$name) == "guide-box")]]
+p2_4 <- arrangeGrob(blank_plot, x_strip + ggtitle('Raw matchup win matrix'), blank_plot, y_strip, p2_4_main + theme(legend.position='none') + theme(plot.margin=unit(c(0, 6, 6, 0), 'pt')), p2_4_legend, nrow=2, heights=c(1.5, 12), widths=c(1, 12, 1.5))
+ggsave(file='figures2/02_raw_mu_matrix_v4.png', plot=p2_4, dpi=100, width=12, height=10)
+
+
 ##########
 # mu chart corrected by stage frequency
 ##########
@@ -325,6 +344,10 @@ ggsave(file='figures/04_stage_adj_mu_matrix.png', plot=p4_all, dpi=100, width=12
 p4_alt <- arrangeGrob(blank_plot, x_strip + ggtitle('Stage freq adjusted MU win matrix (game counts listed -- char x char x stage combinations with <15 matches dropped)'), blank_plot, y_strip, p4_main + theme(legend.position='none') + theme(plot.margin=unit(c(0, 6, 6, 0), 'pt')) + geom_text(aes(label=games_played)), p4_legend, nrow=2, heights=c(1.5, 12), widths=c(1, 12, 1.5))
 
 ggsave(file='figures/04_stage_adj_mu_matrix_alt.png', plot=p4_alt, dpi=100, width=12, height=10)
+
+p4_3 <- arrangeGrob(blank_plot, x_strip + ggtitle('Stage freq adjusted MU win matrix (char x char x stage combinations with <15 matches dropped)'), blank_plot, y_strip, p4_main + theme(legend.position='none') + theme(plot.margin=unit(c(0, 6, 6, 0), 'pt')) + geom_text(aes(label=round(mu_baseline, 3))), p4_legend, nrow=2, heights=c(1.5, 12), widths=c(1, 12, 1.5))
+
+ggsave(file='figures2/04_stage_adj_mu_matrix_v3.png', plot=p4_3, dpi=100, width=12, height=10)
 
 #########
 # one plot per char: opposing char x stages full breakdown
@@ -376,6 +399,9 @@ ggsave(file='figures/06_aggregate_stage_adv.png', plot=p6_all, dpi=100, width=9,
 p6_alt <- arrangeGrob(p6_y_strip, p6_main + ggtitle('Aggregate stage advantages (with game counts)') + geom_text(aes(label=games_played)), nrow=1, widths=c(1,15)) 
 ggsave(file='figures/06_aggregate_stage_adv_alt.png', plot=p6_alt, dpi=100, width=9, height=10)
 
+p6_3 <- arrangeGrob(p6_y_strip, p6_main + ggtitle('Aggregate stage advantages') + geom_text(aes(label=round(stage_adv, 3))), nrow=1, widths=c(1,15)) 
+ggsave(file='figures2/06_aggregate_stage_adv_v3.png', plot=p6_3, dpi=100, width=9, height=10)
+
 #######
 # raw stage advantages
 #######
@@ -399,3 +425,5 @@ p7_alt <- arrangeGrob(p7_y_strip, p7_main + ggtitle('Unadjusted stage advantages
 ggsave(file='figures/07_aggregate_stage_adv_unadjusted_alt.png', plot=p7_alt, dpi=100, width=9, height=10)
 
 
+p7_3 <- arrangeGrob(p7_y_strip, p7_main + ggtitle('Unadjusted stage advantages') + geom_text(aes(label=round(stage_diff, 3))), nrow=1, widths=c(1,15))
+ggsave(file='figures2/07_aggregate_stage_adv_unadjusted_v3.png', plot=p7_3, dpi=100, width=9, height=10)
